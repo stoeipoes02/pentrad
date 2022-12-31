@@ -1,6 +1,5 @@
-import bybit
 import time
-import config
+import bybit
 
-client = bybit.bybit(test=False, api_key=config.api_key, api_secret=config.api_secret)
+client = bybit.bybit(test=False, api_key="MYb1xx5hLrv6UqET1x", api_secret="NjUvgNWnQVOVF0rAiilcBGGodj1LaipeiErJ")
 print("loggedin")
