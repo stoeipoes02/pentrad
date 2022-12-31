@@ -1,5 +1,10 @@
 import time
 import bybit
+import sys
 
-client = bybit.bybit(test=False, api_key="./config.api_key", api_secret="./config.api_secret")
+sys.path.append("../")
+import creds
+
+client = bybit.bybit(test=False, api_key="MYb1xx5hLrv6UqET1x", api_secret=creds.api_key)
+print("does this work?", creds.api_key)
 print("loggedin")
