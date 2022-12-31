@@ -27,10 +27,10 @@ def index():
     conn.close()
     return render_template('index.html', posts=posts)
 
-@app.route('/about')
-def about():
+@app.route('/trading')
+def trading():
 
-    return render_template('about.html')
+    return render_template('trading.html')
 
 @app.route('/<int:post_id>')
 def post(post_id):
