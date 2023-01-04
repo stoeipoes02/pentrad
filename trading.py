@@ -24,16 +24,31 @@ session = inverse_perpetual.HTTP(
     api_secret="WqCBpR6JfSSkzciYGslKC3fjcjlDrvjsLLWc"
 )
 
+#Exponential Moving Average     EMA 12-26H
+twelve = 43200
+twentysix = 93600
+now = 1672354800 
 def printbtcpricedaysago():
-    response1 = requests.get('https://api-testnet.bybit.com/derivatives/v3/public/mark-price-kline?category=linear&symbol=ETHUSDT&interval=D&start=1671145200000&end=1671318000000')
+    response1 = requests.get('https://api-testnet.bybit.com/derivatives/v3/public/mark-price-kline?category=linear&symbol=ETHUSDT&interval=60&start=1672261200000&end=1672354800000')
     data = response1.json()
     price = data['result']['list'][0]
-    return data
+    allprices = data['result']['list']
+    return allprices
 
-print(printbtcpricedaysago())
+listofprices26 = printbtcpricedaysago()
+newlist = []
+
+i = 0
+for i in range(len(listofprices26)):
+    newlist.append(listofprices26[i][4])
+    newlist.append(listofprices26[i][0])
+
+print(newlist)
+
+#print(printbtcpricedaysago())
 
 def print_btcprice():
-    response = requests.get("https://api.bybit.com/derivatives/v3/public/tickers?category=linear&symbol=BTCUSDT")
+    response = requests.get("https://api.bybit.com/derivatives/v3/public/tickers?category=linear&symbol=ETHUSDT")
     data = response.json()
     price = data['result']['list'][0]['lastPrice']
     return price
