@@ -29,15 +29,15 @@ twelve = 43200
 twentysix = 93600
 now = 1672354800 
 def printbtcpricedaysago():
-    response1 = requests.get('https://api-testnet.bybit.com/derivatives/v3/public/mark-price-kline?category=linear&symbol=ETHUSDT&interval=60&start=1672261200000&end=1672354800000')
-    data = response1.json()
-    price = data['result']['list'][0]
+    #response1 = requests.get('https://api-testnet.bybit.com/derivatives/v3/public/mark-price-kline?category=linear&symbol=ETHUSDT&interval=60&start=1672261200000&end=1672354800000')
+    response2 = requests.get('https://api-testnet.bybit.com/derivatives/v3/public/kline?category=linear&symbol=ETHUSDT&interval=60&start=1672261200000&end=1672354800000')
+    data = response2.json()
     allprices = data['result']['list']
     return allprices
 
 listofprices26 = printbtcpricedaysago()
 newlist = []
-
+print(listofprices26)
 i = 0
 for i in range(len(listofprices26)):
     newlist.append(listofprices26[i][4])
@@ -52,6 +52,7 @@ def print_btcprice():
     data = response.json()
     price = data['result']['list'][0]['lastPrice']
     return price
+print(print_btcprice())
 
 #for i in range(len(info['result'])):
 #    print(f"{info['result'][i]['symbol']:<30} {info['result'][i]['bid_price']}")
