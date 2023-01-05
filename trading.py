@@ -25,44 +25,40 @@ session = inverse_perpetual.HTTP(
 )
 
 #Exponential Moving Average     EMA 12-26H
-twelve = 43200
-twentysix = 93600
-now = 1672354800 
+
+def timedelta(candles=10, timeframe=3600, interval=60):
+    now = datetime.datetime.now()
+    enddate = int(now.timestamp())
+
+    startdate = enddate - (timeframe * candles)
+
+    link2 = f'https://api-testnet.bybit.com/derivatives/v3/public/mark-price-kline?category=linear&symbol=ETHUSDT&interval={interval}&start={startdate*1000}&end={enddate*1000}'
+    link = f'https://api-testnet.bybit.com/derivatives/v3/public/kline?category=linear&symbol=ETHUSDT&interval={interval}&start={startdate * 1000}&end={enddate * 1000}'
+    response1 = requests.get(link)
+    data = response1.json()
+    allprices = data['result']['list']
+
+    return data
+
+fastmovingaverage = timedelta(12, 3600, 60)
+slowmovingaverage = timedelta(26, 3600, 60)
+
+
+
+
+
 def printbtcpricedaysago():
-    #response1 = requests.get('https://api-testnet.bybit.com/derivatives/v3/public/mark-price-kline?category=linear&symbol=ETHUSDT&interval=60&start=1672261200000&end=1672354800000')
-    response2 = requests.get('https://api-testnet.bybit.com/derivatives/v3/public/kline?category=linear&symbol=ETHUSDT&interval=60&start=1672261200000&end=1672354800000')
-    data = response2.json()
+    response1 = requests.get('https://api-testnet.bybit.com/derivatives/v3/public/mark-price-kline?category=linear&symbol=ETHUSDT&interval=60&start=1672261200000&end=1672354800000')
+    #response2 = requests.get('https://api-testnet.bybit.com/derivatives/v3/public/kline?category=linear&symbol=ETHUSDT&interval=60&start=1672261200000&end=1672354800000')
+    data = response1.json()
     allprices = data['result']['list']
     return allprices
 
 listofprices26 = printbtcpricedaysago()
 newlist = []
-print(listofprices26)
-i = 0
+
 for i in range(len(listofprices26)):
     newlist.append(listofprices26[i][4])
-    newlist.append(listofprices26[i][0])
+    #newlist.append(listofprices26[i][0])
 
-print(newlist)
-
-#print(printbtcpricedaysago())
-
-def print_btcprice():
-    response = requests.get("https://api.bybit.com/derivatives/v3/public/tickers?category=linear&symbol=ETHUSDT")
-    data = response.json()
-    price = data['result']['list'][0]['lastPrice']
-    return price
-print(print_btcprice())
-
-#for i in range(len(info['result'])):
-#    print(f"{info['result'][i]['symbol']:<30} {info['result'][i]['bid_price']}")
-#    if info['result'][i]['symbol'] == 'FTMUSDT':
-#        print('yeeea found it', i)
-
-#print(session_auth.place_active_order(
-#    symbol="XRPUSD",
-#    side="Buy",
-#    order_type="Market",
-#    qty=1,
-#    time_in_force="GoodTillCancel"
-#))
+#print(newlist)
