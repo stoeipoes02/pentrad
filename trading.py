@@ -3,11 +3,6 @@ import requests
 import bybit
 import datetime
 from pybit import inverse_perpetual
-#webrequest contract modules
-import hmac
-import uuid
-import hashlib
-import time
 
 #raspberry pi
 #sys.path.append("../")
@@ -20,53 +15,30 @@ import time
 #)
 
 #testnet_session_auth
+from pybit import inverse_perpetual
 session = inverse_perpetual.HTTP(
     endpoint='https://testnet.bybit.com',
     api_key="Y30aFoxzTGQaCTybPC",
     api_secret="WqCBpR6JfSSkzciYGslKC3fjcjlDrvjsLLWc"
 )
 
-api_key='Y30aFoxzTGQaCTybPC'
-secret_key='WqCBpR6JfSSkzciYGslKC3fjcjlDrvjsLLWc'
-httpClient=requests.Session()
-recv_window=str(5000)
-url="https://api-testnet.bybit.com" # Testnet endpoint
-
-def HTTP_Request(endPoint,method,payload,Info):
-    global time_stamp
-    time_stamp=str(int(time.time() * 10 ** 3))
-    signature=genSignature(params)
-    headers = {
-        'X-BAPI-API-KEY': api_key,
-        'X-BAPI-SIGN': signature,
-        'X-BAPI-SIGN-TYPE': '2',
-        'X-BAPI-TIMESTAMP': time_stamp,
-        'X-BAPI-RECV-WINDOW': recv_window,
-        'Content-Type': 'application/json'
-    }
-    if(method=="POST"):
-        response = httpClient.request(method, url+endpoint, headers=headers, data=payload)
-    else:
-        response = httpClient.request(method, url+endpoint+"?"+payload, headers=headers)
-    print(response.text)
-    print(Info + " Elapsed Time : " + str(response.elapsed))
-
-def genSignature(payload):
-    param_str= str(time_stamp) + api_key + recv_window + payload
-    hash = hmac.new(bytes(secret_key, "utf-8"), param_str.encode("utf-8"),hashlib.sha256)
-    signature = hash.hexdigest()
-    return signature
-
-#Create Order
-endpoint="/contract/v3/private/order/create"
-method="POST"
-orderLinkId=uuid.uuid4().hex
-params='{"symbol": "BTCUSDT","side": "Buy","positionIdx": 1,"orderType": "Limit","qty": "0.001","price": "20000","timeInForce": "GoodTillCancel","orderLinkId": "' + orderLinkId + '"}'
-HTTP_Request(endpoint,method,params,"Create")
-
-
-
-
+from pybit import usdt_perpetual
+session_auth = usdt_perpetual.HTTP(
+    endpoint="https://api-testnet.bybit.com",
+    api_key="Y30aFoxzTGQaCTybPC",
+    api_secret="WqCBpR6JfSSkzciYGslKC3fjcjlDrvjsLLWc"
+)
+print(session_auth.place_active_order(
+    symbol="BTCUSDT",
+    side="Sell",
+    order_type="Limit",
+    qty=0.02,
+    price=16941,
+    time_in_force="GoodTillCancel",
+    reduce_only=False,
+    close_on_trigger=False,
+    position_idx=0
+))
 
 
 # #Exponential Moving Average     EMA 12-26H
