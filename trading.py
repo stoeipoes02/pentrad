@@ -2,7 +2,7 @@ import requests
 #import sys
 import bybit
 import datetime
-from pybit import inverse_perpetual
+#from pybit import inverse_perpetual
 
 #raspberry pi
 #sys.path.append("../")
@@ -22,24 +22,34 @@ session = inverse_perpetual.HTTP(
     api_secret="WqCBpR6JfSSkzciYGslKC3fjcjlDrvjsLLWc"
 )
 
+# https://github.com/bybit-exchange/api-usage-examples/blob/master/V3_demo/api_demo/contract/Encryption.py
 from pybit import usdt_perpetual
 session_auth = usdt_perpetual.HTTP(
     endpoint="https://api-testnet.bybit.com",
     api_key="Y30aFoxzTGQaCTybPC",
     api_secret="WqCBpR6JfSSkzciYGslKC3fjcjlDrvjsLLWc"
 )
-print(session_auth.place_active_order(
-    symbol="BTCUSDT",
-    side="Sell",
-    order_type="Limit",
-    qty=0.02,
-    price=16941,
-    time_in_force="GoodTillCancel",
-    reduce_only=False,
-    close_on_trigger=False,
-    position_idx=0
-))
 
+def makeorder(symbol="BTCUSDT",side="Buy",order_type="Market", qty=0.001, price=10000):
+    session_auth.place_active_order(
+    symbol=symbol,
+    side=side,
+    order_type=order_type,
+    qty=qty,
+    price=16930,
+    time_in_force="GoodTillCancel", #
+    reduce_only=False,              #
+    close_on_trigger=False,         #
+    position_idx=0                  #
+)
+    return True
+
+print(makeorder(side="Buy", order_type="Market", qty=0.01))
+
+print(session_auth.set_leverage(
+    symbol="BTCUSDT",
+    buy_leverage=5,
+    sell_leverage=5))
 
 # #Exponential Moving Average     EMA 12-26H
 # def timedelta(symbol="ETHUSDT",candles=24, timeframe=3600, interval=60):
