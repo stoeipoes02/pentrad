@@ -32,7 +32,7 @@ session_auth = usdt_perpetual.HTTP(
 )
 
 
-def makeorder(symbol="BTCUSDT",side="Buy",order_type="Market", qty=0.001, price=10000, leverage=5):
+def makeorder(symbol="ETHUSDT",side="Buy",order_type="Market", qty=1, price=10000, leverage=5):
     try:
         session_auth.set_leverage(
             symbol=symbol,
@@ -84,33 +84,56 @@ def simplemovingaverage(symbol="ETHUST",interval=24, candle=3600, timeframe=60):
         secondloop += 1
     return simplemovingaveragelist
 
-#slowmovingaverage = simplemovingaverage("BTCUSDT",52)
-#fastmovingaverage = simplemovingaverage("BTCUSDT",24)
+def trading(symbol="ETHUSDT", qty=0.01, leverage=5, slowinterval=52, fastinterval=24,candle=60, timeframe=1):
+    slowmovingaverage = simplemovingaverage(symbol,slowinterval,candle,timeframe)
+    fastmovingaverage = simplemovingaverage(symbol,fastinterval,candle,timeframe)
 
-#makeorder(side="Sell", order_type="Market", qty=0.01, leverage=5)
+    currentposition = session_auth.my_position(symbol=symbol)
 
-loop = True
-while loop:
-    slowmovingaverage = simplemovingaverage("ETHUSDT",52,candle=60,timeframe=1)
-    fastmovingaverage = simplemovingaverage("ETHUSDT",24,candle=60,timeframe=1)
-    fastopen = False
-    slowopen = False
-    if fastmovingaverage[0] > slowmovingaverage[0] and slowopen == False:
-        print(makeorder(side="Buy", order_type="Market", qty=0.01, leverage=1), "long")
-        print(fastmovingaverage[0], "fast ^^")
+    if fastmovingaverage[0] > slowmovingaverage[0]:
+        print(fastmovingaverage[0], "fast --")
         print(slowmovingaverage[0], "slow")
-        fastopen = True
-        slowopen = False
+        if currentposition ['result'][0]['side'] == "Sell":
+            makeorder(side="Buy", order_type="Market", qty=qty*2, leverage=leverage)
+        elif currentposition ['result'][0]['side'] == "None":
+            makeorder(side="Buy", order_type="Market", qty=qty, leverage=leverage)
 
-    elif fastmovingaverage[0] < slowmovingaverage[0] and slowopen == False:
-        print(makeorder(side="Sell", order_type="Market", qty=0.01, leverage=1),"short")
+    elif fastmovingaverage[0] < slowmovingaverage[0]:
         print(fastmovingaverage[0], "fast")
-        print(slowmovingaverage[0], "slow")
-        placeholder = False
-        slowopen = True
+        print(slowmovingaverage[0], "slow --")
+        if currentposition ['result'][0]['side'] == "Buy":
+            makeorder(side="Sell", order_type="Market", qty=qty*2, leverage=leverage)
+        elif currentposition ['result'][0]['side'] == "None":
+            makeorder(side="Sell", order_type="Market", qty=qty, leverage=leverage)
 
-    time.sleep(60)
+# loop = False
+# while loop:
+#     slowmovingaverage = simplemovingaverage("ETHUSDT",interval=52,candle=60,timeframe=1)
+#     fastmovingaverage = simplemovingaverage("ETHUSDT",interval=24,candle=60,timeframe=1)
 
-#print('fast',fastmovingaverage)
-#print('slow',slowmovingaverage[:12])
+#     currentposition = session_auth.my_position(symbol="ETHUSDT")
+    
+#     if fastmovingaverage[0] > slowmovingaverage[0]:
+#         print(fastmovingaverage[0], "fast --")
+#         print(slowmovingaverage[0], "slow")
 
+#         if currentposition ['result'][0]['side'] == "Sell":
+#             print(makeorder(side="Buy", order_type="Market", qty=1*2, leverage=1), "long")
+#         elif currentposition ['result'][0]['side'] == "None":
+#             print(makeorder(side="Buy", order_type="Market", qty=1, leverage=1), "long")
+
+#     elif fastmovingaverage[0] < slowmovingaverage[0]:
+#         print(fastmovingaverage[0], "fast")
+#         print(slowmovingaverage[0], "slow --")
+
+#         if currentposition ['result'][0]['side'] == "Buy":
+#             print(makeorder(side="Sell", order_type="Market", qty=1*2, leverage=1), "short")
+#         elif currentposition ['result'][0]['side'] == "None":
+#             print(makeorder(side="Sell", order_type="Market", qty=1, leverage=1), "short")
+
+#     time.sleep(60)
+
+if __name__ == "__main__":
+    while True:
+        trading(symbol="ETHUSDT", qty=1, leverage=5, slowinterval=52, fastinterval=24,candle=60, timeframe=1)
+        time.sleep(10)
