@@ -106,34 +106,7 @@ def trading(symbol="ETHUSDT", qty=0.01, leverage=5, slowinterval=52, fastinterva
         elif currentposition ['result'][0]['side'] == "None":
             makeorder(side="Sell", order_type="Market", qty=qty, leverage=leverage)
 
-# loop = False
-# while loop:
-#     slowmovingaverage = simplemovingaverage("ETHUSDT",interval=52,candle=60,timeframe=1)
-#     fastmovingaverage = simplemovingaverage("ETHUSDT",interval=24,candle=60,timeframe=1)
-
-#     currentposition = session_auth.my_position(symbol="ETHUSDT")
-    
-#     if fastmovingaverage[0] > slowmovingaverage[0]:
-#         print(fastmovingaverage[0], "fast --")
-#         print(slowmovingaverage[0], "slow")
-
-#         if currentposition ['result'][0]['side'] == "Sell":
-#             print(makeorder(side="Buy", order_type="Market", qty=1*2, leverage=1), "long")
-#         elif currentposition ['result'][0]['side'] == "None":
-#             print(makeorder(side="Buy", order_type="Market", qty=1, leverage=1), "long")
-
-#     elif fastmovingaverage[0] < slowmovingaverage[0]:
-#         print(fastmovingaverage[0], "fast")
-#         print(slowmovingaverage[0], "slow --")
-
-#         if currentposition ['result'][0]['side'] == "Buy":
-#             print(makeorder(side="Sell", order_type="Market", qty=1*2, leverage=1), "short")
-#         elif currentposition ['result'][0]['side'] == "None":
-#             print(makeorder(side="Sell", order_type="Market", qty=1, leverage=1), "short")
-
-#     time.sleep(60)
-
 if __name__ == "__main__":
     while True:
         trading(symbol="ETHUSDT", qty=1, leverage=5, slowinterval=52, fastinterval=24,candle=60, timeframe=1)
-        time.sleep(10)
+        time.sleep(60)
