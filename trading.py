@@ -120,7 +120,7 @@ def trading(symbol="ETHUSDT", qty=0.01, leverage=5, slowinterval=26, fastinterva
                       qty=qty, leverage=leverage)
 
     elif fastmovingaverage[0] < slowmovingaverage[0]:
-        print(slowmovingaverage[0], "short  🔴")
+        print(slowmovingaverage[0], "short 🔴")
         if currentposition['result'][0]['side'] == "Buy":
             makeorder(side="Sell", order_type="Market",
                       qty=qty*2, leverage=leverage)
