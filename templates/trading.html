@@ -1,7 +1,14 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    <h1>{% block title %} ByBit API trading {% endblock %}</h1>
-    <p>pentrad bybit trading</p>
-    <h1>Candlestick Screener</h1> 
+    <h1>{% block title %} Candlestick Screener {% endblock %}</h1>
+    <p>test</p>
+    <form>
+        <select name="pattern">
+            <option value="doji">doji</option>
+            <option value="engulfing">engulfing</option>
+        </select>
+        <input type="submit", value="scan" />
+    </form>
+
 {% endblock %}
