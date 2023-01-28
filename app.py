@@ -32,8 +32,10 @@ def index():
 @app.route('/trading')
 def trading():
     with open('datasets/companies.csv') as f:
-        symbols = f.read().splitlines()
-        print(symbols)
+        companies = f.read().splitlines()
+        for company in companies:
+            symbol = company.split(','[0])
+            print(symbol)
     return render_template('trading.html',patterns=patterns)
 
 @app.route('/<int:post_id>')
