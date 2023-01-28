@@ -1,4 +1,5 @@
 import sqlite3
+from patterns import patterns
 from flask import Flask, render_template, request, url_for, flash, redirect
 from werkzeug.exceptions import abort
 
@@ -30,7 +31,7 @@ def index():
 @app.route('/trading')
 def trading():
 
-    return render_template('trading.html')
+    return render_template('trading.html',patterns)
 
 @app.route('/<int:post_id>')
 def post(post_id):
