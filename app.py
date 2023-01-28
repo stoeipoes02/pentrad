@@ -3,6 +3,7 @@ from patterns import patterns
 from flask import Flask, render_template, request, url_for, flash, redirect
 from werkzeug.exceptions import abort
 import yfinance as yf
+import os
 
 def get_db_connection():
     conn = sqlite3.connect('database.db')
@@ -31,13 +32,24 @@ def index():
 
 @app.route('/trading')
 def trading():
+    pattern = request.args.get('pattern', None)
+    if pattern:
+        datafiles = os.listdir('datasets/daily')
+        print(datafiles)
+    return render_template('trading.html', patterns=pattern)
+
+
+@app.route('/snapshot')
+def snapshot():
     with open('datasets/companies.csv') as f:
         companies = f.read().splitlines()
         for company in companies:
             symbol = company.split(',')[0]
-            df = yf.download(symbol, start="2021-01-01", end="2022-01-01")
+            df = yf.download(symbol, start="2022-01-01", end="2022-05-01")
             df.to_csv(f'datasets/daily/{symbol}.csv')
-    return render_template('trading.html',patterns=patterns)
+    return {
+        'code':'succes'
+    }
 
 @app.route('/<int:post_id>')
 def post(post_id):
