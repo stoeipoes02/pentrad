@@ -34,8 +34,9 @@ def trading():
     with open('datasets/companies.csv') as f:
         companies = f.read().splitlines()
         for company in companies:
-            symbol = company.split(','[0])
-            print(symbol)
+            symbol = company.split(',')[0]
+            df = yf.download(symbol, start="2021-01-01", end="2022-01-01")
+            df.to_csv(f'datasets/daily/{symbol}.csv')
     return render_template('trading.html',patterns=patterns)
 
 @app.route('/<int:post_id>')
