@@ -1,4 +1,6 @@
-TA-Lib
+os
+csv
+talib
 flask
 pandas
 yfinance

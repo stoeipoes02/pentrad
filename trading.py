@@ -30,8 +30,6 @@ session_auth = usdt_perpetual.HTTP(
 # qty: amount to buy
 # price: needed for order_type=limit to set buy/sell price
 # leverage: set leverage for trade
-
-
 def makeorder(symbol="ETHUSDT", side="Buy", order_type="Market", qty=1, price=10000, leverage=5):
     try:
         session_auth.set_leverage(
@@ -58,8 +56,6 @@ def makeorder(symbol="ETHUSDT", side="Buy", order_type="Market", qty=1, price=10
 # candle: amount of candles to be returned
 # timeframe: seconds for a single candle
 # interval: intervening time between output data 1=1min 60=1h
-
-
 def timedelta(symbol="ETHUSDT", candles=1, timeframe=3600, interval=60):
     now = datetime.datetime.utcnow()
     enddate = int(now.timestamp() + 3600)
@@ -76,8 +72,6 @@ def timedelta(symbol="ETHUSDT", candles=1, timeframe=3600, interval=60):
 # candle: amount of seconds for a single candle
 # timeframe: seconds for a single candle
 # interval: intervening time between output data 1=1min, 60=1h
-
-
 def simplemovingaverage(symbol="ETHUSDT", interval=12, candle=3600, timeframe=60):
     simplemovingaveragelist = []
     data = timedelta(symbol, interval*2, candle, timeframe)['result']['list']
@@ -92,6 +86,7 @@ def simplemovingaverage(symbol="ETHUSDT", interval=12, candle=3600, timeframe=60
         secondloop += 1
     return simplemovingaveragelist
 
+
 # Automatically longs/shorts based on simple moving average
 # symbol: coin
 # qty: amount to be bought of x coin
@@ -100,8 +95,6 @@ def simplemovingaverage(symbol="ETHUSDT", interval=12, candle=3600, timeframe=60
 # fastinterval: fast moving average
 # candle: amount of seconds for a single candle
 # timeframe: intervening time between output data 1=1min, 60=1h
-
-
 def trading(symbol="ETHUSDT", qty=0.01, leverage=5, slowinterval=26, fastinterval=12, candle=60, timeframe=1):
     slowmovingaverage = simplemovingaverage(
         symbol, slowinterval, candle, timeframe)
@@ -129,9 +122,10 @@ def trading(symbol="ETHUSDT", qty=0.01, leverage=5, slowinterval=26, fastinterva
                       qty=qty, leverage=leverage)
     print('---')
 
+print(simplemovingaverage("ETHUSDT", 12, 3600, 1))
 
-if __name__ == "__main__":
-    while True:
-        trading(symbol="ETHUSDT", qty=1, leverage=5, slowinterval=26,
-                fastinterval=12, candle=60, timeframe=1)
-        time.sleep(60)
+#if __name__ == "__main__":
+#    while True:
+        #trading(symbol="ETHUSDT", qty=1, leverage=1, slowinterval=26,
+        #        fastinterval=12, candle=60, timeframe=1)
+        #time.sleep(60)
