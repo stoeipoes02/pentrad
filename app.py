@@ -31,7 +31,7 @@ def index():
 @app.route('/trading')
 def trading():
 
-    return render_template('trading.html',patterns)
+    return render_template('trading.html',patterns=patterns)
 
 @app.route('/<int:post_id>')
 def post(post_id):
