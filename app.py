@@ -34,8 +34,7 @@ def index():
 def trading():
     pattern = request.args.get('pattern', None)
     if pattern:
-        datafiles = os.listdir('datasets/daily')
-        print(datafiles)
+        print(pattern)
     return render_template('trading.html', patterns=pattern)
 
 
