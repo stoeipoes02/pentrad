@@ -2,6 +2,7 @@ import sqlite3
 from patterns import patterns
 from flask import Flask, render_template, request, url_for, flash, redirect
 from werkzeug.exceptions import abort
+import yfinance as yf
 
 def get_db_connection():
     conn = sqlite3.connect('database.db')
@@ -30,7 +31,9 @@ def index():
 
 @app.route('/trading')
 def trading():
-
+    with open('datasets/companies.csv') as f:
+        symbols = f.read().splitlines()
+        print(symbols)
     return render_template('trading.html',patterns=patterns)
 
 @app.route('/<int:post_id>')
