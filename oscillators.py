@@ -1,24 +1,34 @@
 import requests
 import time
+import talib
+import numpy
+
+# Returns current time in milliseconds and the time of x seconds ago since epoch
+def timedelta(times=3600):
+    millisecnow = round(time.time() * 1000)
+    starttime = millisecnow - times * 1000
+    return millisecnow, starttime
+
+startend = timedelta(times=86400*2)
+
+link = f'https://api-testnet.bybit.com/derivatives/v3/public/kline?category=linear&symbol=BTCUSDT&interval=D&start={startend[1]}&end={startend[0]}'
+
+r = requests.get(link).json()
+data = r['result']['list']
+print(data)
 
 
-#def timedelta(symbol="ETHUSDT", timeframe=60)
-millisecnow = round(time.time() * 1000)
-starttime = millisecnow - 86400 * 1000 * 2
+## work in progress numpyndarray??? 
 
-link = f'https://api-testnet.bybit.com/derivatives/v3/public/kline?category=linear&symbol=BTCUSDT&interval=60&start={starttime}&end={millisecnow}'
+closes = []
+for count, value in enumerate(data):
+    print(count, value)
+    closes.append(value[4])
 
-r = requests.get(link)
-print(r.json())
+print(closes)
 
-
-
-
-
-
-# def timedelta(symbol="ETHUSDT", candles=1, timeframe=3600, interval=60):
+test = [23435, 23493.5]
+blup = numpy.array(test)
 
 
-#     response = requests.get(link)
-#     data = response.json()
-#     return data
+print(talib.SMA(numpy, 2))
