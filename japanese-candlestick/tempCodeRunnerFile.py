@@ -1,2 +1,0 @@
-
-# data = timedelta(symbol="BTCUSDT",
