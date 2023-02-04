@@ -1,7 +1,7 @@
 import requests
 import time
 import talib
-import numpy
+from numpy import array
 
 # Returns current time in milliseconds and the time of x seconds ago since epoch
 def timedelta(times=3600):
@@ -15,20 +15,19 @@ link = f'https://api-testnet.bybit.com/derivatives/v3/public/kline?category=line
 
 r = requests.get(link).json()
 data = r['result']['list']
-print(data)
+#print(data)
 
 
-## work in progress numpyndarray??? 
+## Simple Moving Average that takes data and turns it into a moving average
+# 
+def SMA():
+    closes = []
+    for count, value in enumerate(data):
+        closes.append(float(value[4]))
+    
+    arr = array(closes)
+    simpleMA = talib.SMA(arr, len(arr))
 
-closes = []
-for count, value in enumerate(data):
-    print(count, value)
-    closes.append(value[4])
+    return simpleMA[len(arr)-1]
 
-print(closes)
-
-test = [23435, 23493.5]
-blup = numpy.array(test)
-
-
-print(talib.SMA(numpy, 2))
+print(SMA())
