@@ -9,25 +9,32 @@ def timedelta(times=3600):
     starttime = millisecnow - times * 1000
     return millisecnow, starttime
 
-startend = timedelta(times=86400*2)
 
-link = f'https://api-testnet.bybit.com/derivatives/v3/public/kline?category=linear&symbol=BTCUSDT&interval=D&start={startend[1]}&end={startend[0]}'
+#  
+def getdata():
+    startend = timedelta(times=86400*5)
+    symbol = "BTCUSDT"
+    interval = "D"
+    link = f'https://api-testnet.bybit.com/derivatives/v3/public/kline?category=linear&symbol={symbol}&interval={interval}&start={startend[1]}&end={startend[0]}'
+    r = requests.get(link).json()
+    data = r['result']['list']
+    return data
 
-r = requests.get(link).json()
-data = r['result']['list']
-#print(data)
+print(getdata())
 
 
-## Simple Moving Average that takes data and turns it into a moving average
-# 
-def SMA():
+# Simple Moving Average that takes data and turns it into a moving average
+# data: data of price from kline request
+# length: moving average length which will be returned
+# length-1 removes all the nan values
+def SMA(data, length):
     closes = []
     for count, value in enumerate(data):
         closes.append(float(value[4]))
     
     arr = array(closes)
-    simpleMA = talib.SMA(arr, len(arr))
+    simple_MA = talib.SMA(arr, length)
+    return simple_MA[length-1:]
 
-    return simpleMA[len(arr)-1]
-
-print(SMA())
+value = SMA(getdata(), 2)
+print(value)
