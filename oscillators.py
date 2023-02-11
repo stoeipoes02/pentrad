@@ -38,3 +38,5 @@ def SMA(data, length):
 
 value = SMA(getdata(), 2)
 print(value)
+
+# print(talib.STOCH(high, low, close))
