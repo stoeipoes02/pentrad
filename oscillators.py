@@ -45,40 +45,48 @@ def dataframefill(starttime):
     return data
 
 # create dataframe
-data = dataframefill(28800)
+data = dataframefill(3600*20)
 
 # moving average method SMA/WMA/EMA with the amount of candles
 def moving_average(MO,candles):
-    # gets the data of close and turns it into list
-    closesdata = data['Close'].tolist()
-    # reverses the list so sma function can use it
-    reversed_closesdata = closesdata[::-1]
-    # turns the list into a bunch of floats
-    reversed_closesdata_float = [float(item) for item in reversed_closesdata]
-    # turns the float data into a numpy array
-    reversed_closesdata_floatarray = np.array(reversed_closesdata_float)
+    # gets the data of close and turns it into list then reverses the list
+    closesdata = data['Close'].tolist()[::-1]
+    # turns the list into a bunch of floats and turns it into an array
+    reversed_closesdata_floatarray = np.array([float(item) for item in closesdata])
+
     # executes the ma function and checks whether its SMA/WMA/EMA
     method = MO.replace("'","")
     if method == "SMA":
-        data[MO] = talib.SMA(reversed_closesdata_floatarray, candles)[::-1]
+        data[MO+f'{candles}'] = talib.SMA(reversed_closesdata_floatarray, candles)[::-1]
         return True
     elif method == "WMA":
-        data[MO] = talib.WMA(reversed_closesdata_floatarray, candles)[::-1]
+        data[MO+f'{candles}'] = talib.WMA(reversed_closesdata_floatarray, candles)[::-1]
         return True
     elif method == "EMA":
-        data[MO] = talib.EMA(reversed_closesdata_floatarray, candles)[::-1]
+        data[MO+f'{candles}'] = talib.EMA(reversed_closesdata_floatarray, candles)[::-1]
         return True
     else:
         return False
 
-    maanswer = talib.WMA(reversed_closesdata_floatarray, 3)
-    # reversed the array so last item becomes the first item
-    reversed_maanswer = maanswer[::-1]
-    # append it to dataframe
-    data[MO] = reversed_maanswer
-
-
 moving_average('SMA',5)
-moving_average('EMA',5)
-moving_average('WMA',5)
-print(data)
+moving_average('SMA',20)
+
+# point system
+def point():
+    points = {}
+    # point difference for the SMA's
+    slowmoving = data['SMA20'].iloc[0]
+    fastmoving = data['SMA5'].iloc[0]
+    if fastmoving >= slowmoving:
+        difference = (fastmoving-slowmoving) / slowmoving
+        points['SMA'] = {'value':1,'weight':round(difference,4)}
+    else:
+        difference = (slowmoving-fastmoving) / fastmoving
+        points['SMA'] = {'value':-1,'weight':round(difference,4)}
+    print(points)
+
+print(data.head(1))
+
+point()
+
+
