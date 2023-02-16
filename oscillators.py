@@ -68,8 +68,8 @@ def moving_average(MO,candles):
     else:
         return False
 
-moving_average('SMA',5)
-moving_average('SMA',20)
+#moving_average('SMA',5)
+#moving_average('SMA',20)
 
 # point system
 def point():
@@ -83,10 +83,11 @@ def point():
     else:
         difference = (slowmoving-fastmoving) / fastmoving
         points['SMA'] = {'value':-1,'weight':round(difference,4)}
-    print(points)
-
-print(data.head(1))
-
-point()
+    
+    # point system for RSI
 
 
+real = RSI(close, timeperiod=14)
+
+
+print(data)
