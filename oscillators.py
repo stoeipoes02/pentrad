@@ -3,12 +3,15 @@ import time
 import talib
 import numpy as np
 import pandas as pd
+import logging 
 
 '''
 Issues:
 1. getdata link v3 instead of v5
 2. list comprehension usage not in script
 3. talib EMA doesn't have the same results as the bybit EMA but SMA and WMA do
+4. talib RSI doesn't have exact result as bybit but is close
+5. weights on point system dont do anything really
 '''
 
 
@@ -68,26 +71,53 @@ def moving_average(MO,candles):
     else:
         return False
 
-#moving_average('SMA',5)
-#moving_average('SMA',20)
+
+def rsi(candles):
+    dat = data['Close'].tolist()[::-1]
+    dat_array = np.array([float(item) for item in dat])
+    data['RSI'] = talib.RSI(dat_array,candles)[::-1]
 
 # point system
 def point():
+    # configure logging file
+    logging.basicConfig(filename='example.log', level=logging.WARNING)
     points = {}
-    # point difference for the SMA's
-    slowmoving = data['SMA20'].iloc[0]
-    fastmoving = data['SMA5'].iloc[0]
-    if fastmoving >= slowmoving:
-        difference = (fastmoving-slowmoving) / slowmoving
-        points['SMA'] = {'value':1,'weight':round(difference,4)}
-    else:
-        difference = (slowmoving-fastmoving) / fastmoving
-        points['SMA'] = {'value':-1,'weight':round(difference,4)}
-    
-    # point system for RSI
+    try:
+        # point difference for the SMA's
+        fastmoving = data['SMA5'].iloc[0]
+        slowmoving = data['SMA20'].iloc[0]
+        if fastmoving >= slowmoving:
+            difference = (fastmoving-slowmoving) / slowmoving
+            points['SMA'] = {'value':1,'weight':round(difference,4)}
+        else:
+            difference = (slowmoving-fastmoving) / fastmoving
+            points['SMA'] = {'value':0,'weight':round(difference,4)}
+    except Exception as e:
+        logging.error(e)
+
+    try:
+        rsivalue = data['RSI'][0]
+        if rsivalue > 50:
+            points['RSI'] = {'value':0, 'weight':rsivalue/100}
+        else:
+            points['RSI'] = {'value':1, 'weight':rsivalue/100}
+    except Exception as e:
+        logging.error(e)
+    return points
+
+# set up buy or sell thingy
 
 
-real = RSI(close, timeperiod=14)
 
 
-print(data)
+
+# functions to be called
+if __name__ == "__main__":
+    moving_average('SMA',5)
+    moving_average('SMA',20)
+    rsi(5)
+
+    print(data.head(3))
+    print(point())
+
+    del data
