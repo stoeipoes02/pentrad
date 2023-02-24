@@ -5,42 +5,6 @@ import numpy as np
 import pandas as pd
 import logging 
 
-
-prvkey = '''-----BEGIN PRIVATE KEY-----
-MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCTbm2XPyPLZtJ6
-eRm/w/sB/Ibnl1eo6Pn+FqdItE23APFV9sCJCXScR3zjyWdlSzMd16ucJHgWxibN
-mBZnQrwq2rF6+TQ6GCBclbigG+hlQsZtiansKQHzQseYtOYTMbvZ8tpDloCVB6R3
-OPrsdeoKZxkHaOPQgHAVzFuepCXzMA+BJjCMV+mT8p039SLuyeultZ4kU1p2Et9j
-wBsHkILoJ5mYuk9/+JSwW6wWst1IQiPzFipqCuS7ruWekCZ4DX5jI+urtY9rAaQY
-YpVkiRJViAVKxXtOvDFNgdC9Jp6fDJHyFXOccIgRD/6W5HmxnsTb7dApKjHRx13r
-7IV1JQ01AgMBAAECggEAGjYKRtcDYqCrr/mCweyyXhaK13a5L38IHwvg/tSLcos4
-3NsrPNHRCQ3OnuLKPqCBfH9A89gp/4aIFIpDBWXAdW//GMlgZymt6zf1JIYBqasX
-Axdz/dgGkDyhpr0WoHf5mVSLSHPj9Vrv+wBG4C5QhzvwH7ietA15n+5+pXQyiQsP
-xZhgIYQMvwGSXHw7Gie2DadAncMUMxIdM2raHU+8o2KM5ktZBIPokj3bFLxSRafy
-OQZfemHqoyHs/ecjbX3gLPi0uFFNKUQhd9SVK6LzwROeKSjqGXWhv/Qh5zz9xJlb
-RiYPhohehat4zUfD5mF1NQDAUdjl7ge1GoW6hgIKKwKBgQDG1MYaeEFTGXZI975Q
-Ar210bVUUQA2NAfqt3a75BxNFezOJeFA3cioqT7dtbVd+tx66lIrNMaIJami1hGu
-14KQYWs/2+WyNdKFmRorXqNm0yJqxFKPP6vxoajjzOok27L+Ad4RrFGb5KQFRpBC
-w/cy+Wu8betgHEhOcfyFypGCMwKBgQC90k5GACJb1eQJgLhgYGbFmeFH4XWHGqby
-ZfR2XqMhnaXdvkU0YioCgFHIfQ+UX5h7m+Um1sJg2O7hV/yLA5gb4BuSP1xDDgZK
-hI4Nc99VZxmneKNipwByWLL5GjnWxCCNyUaPnVAVGCzckdMExn5fHBXLeeto2hkC
-4bOCp5va9wKBgDJygeDtagWfjDdvREYgq+mZz5wZASi/gtK2wdViRxv32CFl0wUW
-QHcqmdy+4cl6gL5e/YIg3c5lX+kEz2/BFktzrDaDoH/a0BM9iTo/xM2t/CmCrj/S
-M9oW3jcOIso/Q+bWqnVpdztKg6MjCC8ocWvphMBGU1YLVv0wRpXbk5epAoGAUESb
-JsytusnSuRX+YXrCWrK8acn0CeKCUCQ+4MMaFn/0gLURzJnqC865Rp9jtClMcJC2
-sNrFrXBua0nql9o4OylkX059tDk8/cvZyeSCvzluxruj03atIK1TWTT22lNrNKm1
-'''
-pubkey = '''-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAk25tlz8jy2bSenkZv8P7
-AfyG55dXqOj5/hanSLRNtwDxVfbAiQl0nEd848lnZUszHdernCR4FsYmzZgWZ0K8
-Ktqxevk0OhggXJW4oBvoZULGbYmp7CkB80LHmLTmEzG72fLaQ5aAlQekdzj67HXq
-CmcZB2jj0IBwFcxbnqQl8zAPgSYwjFfpk/KdN/Ui7snrpbWeJFNadhLfY8AbB5CC
-6CeZmLpPf/iUsFusFrLdSEIj8xYqagrku67lnpAmeA1+YyPrq7WPawGkGGKVZIkS
-VYgFSsV7TrwxTYHQvSaenwyR8hVznHCIEQ/+luR5sZ7E2+3QKSox0cdd6+yFdSUN
-NQIDAQAB
------END PUBLIC KEY-----
-'''
-
 '''
 Issues:
 1. getdata link v3 instead of v5
@@ -165,15 +129,17 @@ if __name__ == "__main__":
     position()
     #del data
 
+
 import hmac
 import hashlib
 import uuid
 
+# https://bybit-exchange.github.io/docs/derivatives/contract/place-order
 api_key='Y30aFoxzTGQaCTybPC'
 secret_key='WqCBpR6JfSSkzciYGslKC3fjcjlDrvjsLLWc'
 httpClient=requests.Session()
 recv_window=str(5000)
-url="https://api-testnet.bybit.com" # Testnet endpoint
+url="https://api-testnet.bybit.com"
 
 def HTTP_Request(endPoint,method,payload,Info):
     global time_stamp
@@ -206,3 +172,36 @@ method="POST"
 orderLinkId=uuid.uuid4().hex
 params='{"symbol": "BTCUSDT","side": "Buy","positionIdx": 0,"orderType": "Limit","qty": "0.001","price": "10000","timeInForce": "GoodTillCancel","orderLinkId": "' + orderLinkId + '"}'
 HTTP_Request(endpoint,method,params,"Create")
+
+
+orderlinklist = []
+
+def create_order(symbol):
+    endpoint="/contract/v3/private/order/create"
+    method="POST"
+    orderLinkId=uuid.uuid4().hex
+    params='{"symbol": symbol,"side": "Buy","positionIdx": 0,"orderType": "Limit","qty": "0.001","price": "10000","timeInForce": "GoodTillCancel","orderLinkId": "' + orderLinkId + '"}'
+    orderlinklist.append(orderLinkId)
+    return None
+
+create_order("BTCUSDT")
+
+print(orderlinklist)
+
+#Get unfilled Orders
+# endpoint="/contract/v3/private/order/unfilled-orders"
+# method="GET"
+# params='settleCoin=USDT'
+# HTTP_Request(endpoint,method,params,"UnFilled")
+
+# #Get Order List
+# endpoint="/contract/v3/private/order/list"
+# method="GET"
+# params="symbol=BTCUSDT&orderStatus=New&orderLinkId="+orderLinkId
+# HTTP_Request(endpoint,method,params,"List")
+
+# #Cancel Order
+# endpoint="/contract/v3/private/order/cancel"
+# method="POST"
+# params='{"symbol": "BTCUSDT","orderLinkId": "'+orderLinkId+'"}'
+# HTTP_Request(endpoint,method,params,"Cancel")
