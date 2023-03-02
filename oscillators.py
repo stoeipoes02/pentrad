@@ -12,8 +12,8 @@ Issues:
 3. talib EMA doesn't have the same results as the bybit EMA but SMA and WMA do
 4. talib RSI doesn't have exact result as bybit but is close
 5. weights on point system dont do anything really
+6. using pandas dataframe but has problems like importing 
 '''
-
 
 
 # Returns current time in milliseconds and the time of x seconds ago since epoch
@@ -166,42 +166,32 @@ def genSignature(payload):
     signature = hash.hexdigest()
     return signature
 
-#Create Order
-endpoint="/contract/v3/private/order/create"
-method="POST"
-orderLinkId=uuid.uuid4().hex
-params='{"symbol": "BTCUSDT","side": "Buy","positionIdx": 0,"orderType": "Limit","qty": "0.001","price": "10000","timeInForce": "GoodTillCancel","orderLinkId": "' + orderLinkId + '"}'
-HTTP_Request(endpoint,method,params,"Create")
-
-
-orderlinklist = []
 
 def create_order(symbol):
     endpoint="/contract/v3/private/order/create"
     method="POST"
     orderLinkId=uuid.uuid4().hex
-    params='{"symbol": symbol,"side": "Buy","positionIdx": 0,"orderType": "Limit","qty": "0.001","price": "10000","timeInForce": "GoodTillCancel","orderLinkId": "' + orderLinkId + '"}'
-    orderlinklist.append(orderLinkId)
+    params='{"symbol": "BTCUSDT","side": "Buy","positionIdx": 0,"orderType": "Limit","qty": "0.001","price": "10000","timeInForce": "GoodTillCancel","orderLinkId": "' + orderLinkId + '"}'
+    HTTP_Request(endpoint,method,params,"Create")
+
     return None
 
-create_order("BTCUSDT")
+#create_order("BTCUSDT")
 
-print(orderlinklist)
+#Get filled orders
+# endpoint = "/contract/v3/private/position/list"
+# method = "GET"
+# params='symbol=BTCUSDT'
+# HTTP_Request(endpoint,method, params, 'filled orders')
 
-#Get unfilled Orders
-# endpoint="/contract/v3/private/order/unfilled-orders"
-# method="GET"
-# params='settleCoin=USDT'
-# HTTP_Request(endpoint,method,params,"UnFilled")
+#Get unfilled orders
+# endpoint = "/contract/v3/private/order/unfilled-orders"
+# method = "GET"
+# params="symbol=BTCUSDT"
+# HTTP_Request(endpoint,method,params, 'unfilled orders')
 
-# #Get Order List
-# endpoint="/contract/v3/private/order/list"
-# method="GET"
-# params="symbol=BTCUSDT&orderStatus=New&orderLinkId="+orderLinkId
-# HTTP_Request(endpoint,method,params,"List")
-
-# #Cancel Order
-# endpoint="/contract/v3/private/order/cancel"
-# method="POST"
-# params='{"symbol": "BTCUSDT","orderLinkId": "'+orderLinkId+'"}'
-# HTTP_Request(endpoint,method,params,"Cancel")
+#Cancel unfilled order
+# endpoint = "/contract/v3/private/order/cancel"
+# method = "POST"
+# params='{"symbol":"BTCUSDT","orderLinkId":"66c178973bd245649ceb7cbb565509fa"}'
+# HTTP_Request(endpoint,method,params, 'cancel certain order')
