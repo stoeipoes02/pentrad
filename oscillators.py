@@ -7,6 +7,7 @@ import logging
 import hmac
 import hashlib
 import uuid
+import json
 
 '''
 Issues:
@@ -41,8 +42,10 @@ def HTTP_Request(endPoint,method,payload,Info):
         response = httpClient.request(method, url+endPoint, headers=headers, data=payload)
     else:
         response = httpClient.request(method, url+endPoint+"?"+payload, headers=headers)
-    print(response.text)
-    print(Info + " Elapsed Time : " + str(response.elapsed))
+    #print(response.text)
+    #print(Info + " Elapsed Time : " + str(response.elapsed))
+
+    return response.text
 
 def genSignature(payload):
     param_str= str(time_stamp) + api_key + recv_window + payload
@@ -76,6 +79,38 @@ def getdata(symbol="BTCUSDT", interval=60,starttime=3600):
     return data
 
 
+
+# Transforms the given list into either a list of lists or a numpy array
+# data: the source of the data
+# element: element of the list to be chosen
+# types: boolean for numpy array or list of lists
+def transform(data:list, element:int, types:bool):
+    # below comment might help with choosing multiple elements of a list
+    #list = [(x[element[0]],x[element[1]]) for x in data]
+    list = [x[element] for x in data]
+
+    if types:
+        float_list = [float(x) for x in list[::-1]]
+        result = np.array(float_list)
+
+    else:
+        result = [[i] for i in list]
+
+    return result
+
+datas = getdata("BTCUSDT", 15, 3600)
+blub = transform(datas,4,True)
+
+print(talib.WMA(blub,3))
+
+
+
+
+
+
+
+
+
 # creates dataframe with columns: time, open, high, low, close, volume and turnover
 # uses list comprehension to fill the right value to every row/column
 def dataframefill(starttime):
@@ -89,7 +124,7 @@ def dataframefill(starttime):
     return data
 
 # create dataframe
-data = dataframefill(3600*30)
+data = dataframefill(3600*27)
 
 # moving average method SMA/WMA/EMA with the amount of candles
 def moving_average(MO,candles):
@@ -150,42 +185,40 @@ def point():
 
 
 
-
-
-# functions to be called
-if __name__ == "__main__":
-    # moving_average('SMA',12)
-    # moving_average('SMA',26)
-    # rsi(5)
-    pass
-    # print(data.head(3))
-    # print(point())
-
-    # del data
-
-
-
-import json
-
-def create_order(symbol):
+def create_order(symbol, side, orderType, qty, price):
     endpoint="/contract/v3/private/order/create"
     method="POST"
     orderLinkId=uuid.uuid4().hex
-    params={"symbol": symbol,"side": "Buy","positionIdx": 0,"orderType": "Limit","qty": "0.001","price": "15000","timeInForce": "GoodTillCancel","orderLinkId": orderLinkId}
+    params={"symbol": symbol,"side": side,"positionIdx": 0,"orderType": orderType,"qty": qty,"price": price,"timeInForce": "GoodTillCancel","orderLinkId": orderLinkId}
     newparams = json.dumps(params)
-    penis = newparams.replace('\\','')
-    HTTP_Request(endpoint,method,penis,"Create")
+    params = newparams.replace('\\','')
+    
 
-    return None
+    return HTTP_Request(endpoint,method,params,"Create")
 
 
-create_order("BTCUSDT")
+
+def get_open_positions(symbol):
+    endpoint = "/contract/v3/private/position/list"
+    method = "GET"
+    params=f'symbol={symbol}'
+    position = json.loads(HTTP_Request(endpoint,method, params, 'filled orders'))
+    
+    return position['result']['list'][0]['side']
+
+
+if __name__ == "__main__":
+
+
+    pass
+
+
 
 #Get filled orders
 # endpoint = "/contract/v3/private/position/list"
 # method = "GET"
 # params='symbol=BTCUSDT'
-# HTTP_Request(endpoint,method, params, 'filled orders')
+# print(HTTP_Request(endpoint,method, params, 'filled orders'))
 
 #Get unfilled orders
 # endpoint = "/contract/v3/private/order/unfilled-orders"
