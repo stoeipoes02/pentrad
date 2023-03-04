@@ -98,89 +98,28 @@ def transform(data:list, element:int, types:bool):
 
     return result
 
-datas = getdata("BTCUSDT", 15, 3600)
-blub = transform(datas,4,True)
 
-print(talib.WMA(blub,3))
+def points():
+    symbol = "BTCUSDT"
+    interval = 15
+    starttime = 7200
+    data = getdata(symbol,interval,starttime)
+    transformed_data = transform(data,4,True)
 
+    slow = talib.WMA(transformed_data,6)
+    fast = talib.WMA(transformed_data,3)
 
+    points = []
 
-
-
-
-
-
-
-# creates dataframe with columns: time, open, high, low, close, volume and turnover
-# uses list comprehension to fill the right value to every row/column
-def dataframefill(starttime):
-    blub = getdata(starttime=starttime)
-    data = pd.DataFrame(columns=['Time','Open','High','Low','Close','Volume', 'Turnover'])
-
-    i = 0
-    for col in data.columns:
-        data[f'{col}'] = [(x[i])for x in blub]
-        i += 1
-    return data
-
-# create dataframe
-data = dataframefill(3600*27)
-
-# moving average method SMA/WMA/EMA with the amount of candles
-def moving_average(MO,candles):
-    # gets the data of close and turns it into list then reverses the list
-    closesdata = data['Close'].tolist()[::-1]
-    # turns the list into a bunch of floats and turns it into an array
-    reversed_closesdata_floatarray = np.array([float(item) for item in closesdata])
-
-    # executes the ma function and checks whether its SMA/WMA/EMA
-    method = MO.replace("'","")
-    if method == "SMA":
-        data[MO+f'{candles}'] = talib.SMA(reversed_closesdata_floatarray, candles)[::-1]
-        return True
-    elif method == "WMA":
-        data[MO+f'{candles}'] = talib.WMA(reversed_closesdata_floatarray, candles)[::-1]
-        return True
-    elif method == "EMA":
-        data[MO+f'{candles}'] = talib.EMA(reversed_closesdata_floatarray, candles)[::-1]
-        return True
-    else:
-        return False
-
-
-# reverses output of close so rsi gets aligned right
-def rsi(candles):
-    dat = data['Close'].tolist()[::-1]
-    dat_array = np.array([float(item) for item in dat])
-    data['RSI'] = talib.RSI(dat_array,candles)[::-1]
-
-# point system
-def point():
-    # configure logging file
-    logging.basicConfig(filename='example.log', level=logging.WARNING)
-    points = {}
-    try:
-        # point difference for the SMA's
-        fastmoving = data['SMA12'].iloc[0]
-        slowmoving = data['SMA26'].iloc[0]
-        if fastmoving >= slowmoving:
-            difference = (fastmoving-slowmoving) / slowmoving
-            points['SMA'] = {'value':1,'weight':round(difference,4)}
-        else:
-            difference = (slowmoving-fastmoving) / fastmoving
-            points['SMA'] = {'value':0,'weight':round(difference,4)}
-    except Exception as e:
-        logging.error(e)
-
-    try:
-        rsivalue = data['RSI'][0]
-        if rsivalue > 50:
-            points['RSI'] = {'value':0, 'weight':rsivalue/100}
-        else:
-            points['RSI'] = {'value':1, 'weight':rsivalue/100}
-    except Exception as e:
-        logging.error(e)
     return points
+
+points()
+
+
+
+
+
+
 
 
 
