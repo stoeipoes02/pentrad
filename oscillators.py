@@ -87,35 +87,26 @@ def getdata(symbol="BTCUSDT", interval=60,starttime=3600):
 def transform(data:list, element:int, types:bool):
     # below comment might help with choosing multiple elements of a list
     #list = [(x[element[0]],x[element[1]]) for x in data]
-    list = [x[element] for x in data]
 
+    list = [x[element] for x in data]
     if types:
         float_list = [float(x) for x in list[::-1]]
         result = np.array(float_list)
-
     else:
         result = [[i] for i in list]
 
     return result
 
 
-def points():
-    symbol = "BTCUSDT"
-    interval = 15
-    starttime = 7200
+# returns the last slow and fast moving average values in a list
+def pointsmovingaverage(symbol, interval, starttime, item, slowmoving, fastmoving):
     data = getdata(symbol,interval,starttime)
-    transformed_data = transform(data,4,True)
+    transformed_data = transform(data,item,True)
 
-    slow = talib.WMA(transformed_data,6)
-    fast = talib.WMA(transformed_data,3)
+    slow = talib.WMA(transformed_data,slowmoving)
+    fast = talib.WMA(transformed_data,fastmoving)
 
-    points = []
-
-    return points
-
-points()
-
-
+    return slow,fast
 
 
 
@@ -132,7 +123,6 @@ def create_order(symbol, side, orderType, qty, price):
     newparams = json.dumps(params)
     params = newparams.replace('\\','')
     
-
     return HTTP_Request(endpoint,method,params,"Create")
 
 
@@ -143,11 +133,34 @@ def get_open_positions(symbol):
     params=f'symbol={symbol}'
     position = json.loads(HTTP_Request(endpoint,method, params, 'filled orders'))
     
-    return position['result']['list'][0]['side']
+    return position['result']['list'][0]
 
 
 if __name__ == "__main__":
+    # while True:
+    #     side = get_open_positions("BTCUSDT")
 
+    #     if side == 'None':
+    #         pass
+    #     else:
+    #         slow,fast = pointsmovingaverage("BTCUSDT",15,7200,4,6,3)
+
+    #         if side == "Buy":
+    #             if fast[-1] >= slow[-1]:
+    #                 print('fast above slow')
+    #             else:
+    #                 print('slow above fast')
+     
+    #         elif side == "Sell":
+    #             if fast[-1] <= slow[-1]:
+    #                 print('fast under slow')
+    #             else:
+    #                 print('slow under fast')
+
+    #     time.sleep(60)
+
+    print(get_open_positions("BTCUSDT"))
+    #print(create_order("BTCUSDT","Buy","Limit","0.01","10000"))
 
     pass
 
