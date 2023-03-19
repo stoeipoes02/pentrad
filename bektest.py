@@ -4,10 +4,6 @@ from backtesting.lib import crossover, barssince
 import talib
 import numpy as np
 import pandas as pd
-from datetime import datetime
-import plotly.graph_objects as go
-from matplotlib import pyplot
-
 
 
 class RsiOscillator(Strategy):
@@ -109,50 +105,6 @@ class PATTERN(Strategy):
 bt = Backtest(GOOG, MACD, cash=10_000)
 
 
-# stats = bt.run()
-# bt.plot()
-# print(stats)
-
-
-# reading in the data
-df = pd.read_csv("EURUSD_Candlestick_4_Hour_ASK_05.05.2003-16.10.2021.csv")
-df.columns=['time', 'open', 'high', 'low', 'close', 'volume']
-#Check if NA values are in data
-df=df[df['volume']!=0]
-df.reset_index(drop=True, inplace=True)
-df.isna().sum()
-
-print(df.head(6))
-
-backcandles = 60
-window = 10
-candleid = 1
-
-
-maxim = np.array([])
-minim = np.array([])
-xxmin = np.array([])
-xxmax = np.array([])
-
-for i in range(200, 2000, 200):
-
-    minim = np.append(minim, df.low.iloc[i:i+window].min())
-    xxmin = np.append(xxmin, df.low.iloc[i:i+window].idxmin())
-
-    maxim = np.append(maxim, df.high.iloc[i:i+window].max())
-    xxmax = np.append(xxmax, df.high.iloc[i:i+window].idxmax())
-
-slmin, intercmin = np.polyfit(xxmin, minim,1)
-slmax, intercmax = np.polyfit(xxmax, maxim,1)
-
-dfpl = df[1:2200]  
-fig = go.Figure(data=[go.Candlestick(x=dfpl.index,
-                open=dfpl['open'],
-                high=dfpl['high'],
-                low=dfpl['low'],
-                close=dfpl['close'])])
-
-fig.add_trace(go.Scatter(x=xxmin, y=slmin*xxmin + intercmin, mode='lines', name='min slope'))
-fig.add_trace(go.Scatter(x=xxmax, y=slmax*xxmax + intercmax, mode='lines', name='max slope'))
-
-fig.show()
+stats = bt.run()
+bt.plot()
+print(stats)
