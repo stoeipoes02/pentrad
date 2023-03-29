@@ -61,7 +61,7 @@ fig = go.Figure(data=[go.Candlestick(x=dfpl.index,
                 close=dfpl['close'])])
 
 c=0
-while (1):
+while True:
     if(c>len(ss)-1 ):
         break
     fig.add_shape(type='line', x0=ss[c][0], y0=ss[c][1],
@@ -72,7 +72,7 @@ while (1):
     c+=1
 
 c=0
-while (1):
+while True:
     if(c>len(rr)-1 ):
         break
     fig.add_shape(type='line', x0=rr[c][0], y0=rr[c][1],
