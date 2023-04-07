@@ -5,6 +5,8 @@ from discord.ext.commands import has_permissions, BotMissingPermissions
 import json
 import requests
 import asyncio
+import pandas as pd
+import csv
 
 # importing credentials
 from apikeys import *
@@ -14,16 +16,22 @@ intents.members = True
 
 client = commands.Bot(command_prefix = '!', intents=intents)
 
+
+# bot ready message and status
 @client.event
 async def on_ready():
-    await client.change_presence(status=discord.Status.online, activity=discord.Streaming(name='minecraft',url='https://twitch.tv/'))
+    await client.change_presence(status=discord.Status.dnd, activity=discord.Streaming(name='minecraft',url='https://twitch.tv/'))
     print("Bot is ready")
 
+
+# simple test command
 @client.command()
 async def hello(ctx):
-    print('hey')
     await ctx.send("hello i am bot")
 
+
+
+# dad joke
 @client.command()
 async def joke(ctx):
 
@@ -41,6 +49,8 @@ async def joke(ctx):
 
 
 
+
+# member join/remove/update
 @client.event
 async def on_member_join(member):
     channel = client.get_channel(1012764403537543238)
@@ -78,15 +88,14 @@ async def leave(ctx):
         await ctx.send('not in a voice dummy')
 
 
-# ### kick
+### kick
 @client.command()
 @has_permissions(kick_members=True)
 async def kick(ctx, member: Member, *, reason=None):
     await member.kick(reason=reason)
     await ctx.send(f'user {member} has been kicked')
 
-
-# ### ban
+### ban
 @client.command()
 @has_permissions(ban_members=True)
 async def ban(ctx, member: Member, *, reason=None):
@@ -94,6 +103,7 @@ async def ban(ctx, member: Member, *, reason=None):
     await ctx.send(f'user {member} has been banned')
 
 
+# embed
 @client.command()
 async def embed(ctx):
 
@@ -107,16 +117,93 @@ async def embed(ctx):
     await ctx.channel.send(embed=embed)
 
 
-@client.event
-async def on_command_error(ctx, error):
-    if isinstance(error, commands.MissingPermissions):
-        await ctx.send("No permission to run this command")
 
 
+
+
+# private message to user
 @client.command()
 async def message(ctx, user:discord.Member, *, message=None):
     message = f'hey there {ctx.author} wants to say hello'
     await user.send(message)
+
+
+
+# error exceptions sucha as missingpermissions and unknown commands
+@client.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("No permission to run this command")
+    elif isinstance(error, commands.CommandNotFound):
+        await ctx.send("Above command doesn't exist")
+
+
+
+
+
+
+@client.command()
+async def all_stats(ctx):
+    data = pd.read_csv('game.csv')
+    embed = discord.Embed(title='Stats', url='https://google.com', description='All Stats', color=0x4dff4d)
+
+    for index, row in data.iterrows():
+        embed.add_field(name=row['name'], value=f"Health: {row['health']}\nAttack: {row['attack']}\nGold: {row['gold']}", inline=True)
+
+    await ctx.send(embed=embed)
+
+
+
+@client.command()
+async def solo_stats(ctx, name='kick'):
+    data = pd.read_csv('game.csv')
+    row = data.loc[data['name'] == name]
+
+    # Check if the row exists
+    if not row.empty:
+        # Get the stats from the row
+        health = row.iloc[0]['health']
+        attack = row.iloc[0]['attack']
+        gold = row.iloc[0]['gold']
+        # Create the embed with the stats
+        embed = discord.Embed(title=name, description=f"Health: {health}\nAttack: {attack}\nGold: {gold}", color=discord.Color.blue())
+        await ctx.send(embed=embed)
+    else:
+        await ctx.send(f"No stats found for {name}")
+
+
+@client.command()
+async def change_stats(ctx, name):
+    with open('game.csv', mode='r') as game:
+        game_reader = csv.DictReader(game)
+        rows = list(game_reader)
+    
+    found = False
+    for row in rows:
+        if row['name'] == name:
+            row['gold'] = str(int(row['gold']) + 10)
+            found = True
+    
+    if found:
+        with open('game.csv', mode='w', newline='') as game:
+            fieldnames = ['name', 'health', 'attack', 'gold']
+            game_writer = csv.DictWriter(game, fieldnames=fieldnames)
+            game_writer.writeheader()
+            game_writer.writerows(rows)
+        await ctx.send(f"{name} now has 10 more gold!")
+    else:
+        await ctx.send(f"{name} not found in the game.")
+
+
+
+
+
+
+# --- TO-DO-list ---
+# 1. buttons
+# 2. graph
+# 3. tradingbot
+# 4. 
 
 
 
