@@ -30,7 +30,7 @@ BTC['Date'] = pd.to_datetime(BTC['Date'])
 BTC.set_index("Date", inplace=True)
 
 
-# List of columns to update
+# List of columns to update 
 columns_to_update = ["Open", "High", "Low","Close"]
 # Loop through the columns and remove double quotes and commas, and convert to float
 for col in columns_to_update:
@@ -57,8 +57,7 @@ BTC = BTC.iloc[::-1]
 def optim_func(series):
     # make things more fun
     if series["# Trades"] < 30:
-        # puts value low so will try to optimize more
-        return -1
+       return -1
 
     # how to make most money while being in the market for least amount of time
     #return series['Equity Final [$]'] / series["Exposure Time [%]"]
@@ -77,27 +76,16 @@ class RsiOscillator(Strategy):
 
 
     def next(self):
+        price = self.data.Close[-1]
+
         if crossover(self.daily_rsi, self.upper_bound):
             if self.position.is_long or not self.position:
                 self.position.close()
-                self.sell()
+                self.sell(tp=0.9*price, sl=1.05*price)
         elif crossover(self.daily_rsi, self.lower_bound):
             if self.position.is_short or not self.position:
                 self.position.close()
-                self.buy()
-
-        # price = self.data.Close[-1]
-
-        # if (self.daily_rsi[-1] > self.upper_bound and barssince(self.daily_rsi < self.upper_bound) == 3):
-        #     self.position.close()
-
-        # elif self.lower_bound > self.daily_rsi[-1]:
-        #     self.buy(size=1)
-
-
-        # # elif crossover(self.lower_bound, self.daily_rsi):
-        # #     #self.buy(tp=1.15*price,sl=0.95*price)
-        # #     self.buy(size=0.1)
+                self.buy(tp=1.1*price, sl=0.95*price)
 
 class SMA_MovingAverage(Strategy):
     fastmovingaverage = 10
@@ -107,16 +95,11 @@ class SMA_MovingAverage(Strategy):
         self.fastmovingaverage = self.I(talib.SMA, self.data.Close, self.fastmovingaverage)
         self.slowmovingaverage = self.I(talib.SMA, self.data.Close, self.slowmovingaverage)
 
-
     def next(self):
         if crossover(self.fastmovingaverage,self.slowmovingaverage):
             self.buy()
         elif crossover(self.slowmovingaverage,self.fastmovingaverage):
             self.position.close()
-
-        # elif crossover(self.lower_bound, self.daily_rsi):
-        #     #self.buy(tp=1.15*price,sl=0.95*price) 
-        #     self.buy(size=0.1)
 
 class ADX(Strategy):
 
@@ -146,34 +129,31 @@ class STOCH(Strategy):
 
 class MACD(Strategy):
 
-    def __init__(self, fastperiod, slowperiod, signalperiod):
-        self.fastperiod = fastperiod
-        self.slowperiod = slowperiod
-        self.signalperiod = signalperiod
+    fastperiod = 12
+    slowperiod = 26
+    signalperiod = 9
 
     def init(self):
         self.macdsignal = self.I(talib.MACD, self.data.Close, self.fastperiod, self.slowperiod, self.signalperiod)
 
     def next(self):
-        if self.macdsignal[1] > self.macdsignal[0] and not self.position:
-            self.buy()
-        elif self.macdsignal[0] > self.macdsignal[1]:
+        price = self.data.Close[-1]
+        if crossover(self.macdsignal[1], self.macdsignal[0]):
             self.position.close()
+            self.buy()
+        elif crossover(self.macdsignal[0], self.macdsignal[1]):
+            self.position.close()
+            self.sell()
 
 
-BTC['Signal'] = np.random.randint(-1,2, len(BTC))
-
-import pandas_ta as ta
-
-
-# upperband, middleband, lowerband = BBANDS(close, timeperiod=5, nbdevup=2, nbdevdn=2, matype=0)
-
-def indicator(data):
-    return data.Close.s.pct_change(periods=7) * 100
+def indicator(data, period=7, multiplier=100):
+    return data.Close.s.pct_change(periods=period) * multiplier
 
 class OSMA(Strategy):
+    period = 7
+    multiplier = 100
     def init(self):
-        self.pct_change = self.I(indicator, self.data)
+        self.pct_change = self.I(indicator, self.data, period=self.period, multiplier=self.multiplier)
         
         
     def next(self):
@@ -188,43 +168,110 @@ class OSMA(Strategy):
                 self.buy()
 
 
+
+# def maindicator(data, period=5):
+#     # Slice the data to get only the relevant period
+#     data_slice = data[:period]
+#     # Calculate the total of the sliced data
+#     total = sum(data_slice)
+#     # Calculate the simple moving average
+#     sma = total / period
+#     # Return the calculated SMA values as a Series
+#     sma_series = pd.Series([sma] * len(data))
+
+#     return sma_series
+
+
+import numpy as np
+
+def maindicator(data, period=5):
+    # Initialize an empty list to store the SMA values
+    sma_values = []
+    
+    # Iterate through the data, starting from the (period-1)-th index
+    for i in range(period-1, len(data)):
+        # Slice the data to get the relevant period
+        data_slice = data[i+1-period:i+1]
+        # Calculate the total of the sliced data
+        total = sum(data_slice)
+        # Calculate the simple moving average for the current day
+        sma = total / period
+        # Append the calculated SMA value to the list
+        sma_values.append(sma)
+    
+    # Pad the SMA values list with NaN values for the initial (period-1) days
+    sma_values = [np.nan]*(period-1) + sma_values
+    
+    # Return the calculated SMA values as a Series
+    sma_series = pd.Series(sma_values)
+
+    return sma_series
+
+
+
+
+
+class OWNSMA(Strategy):
+
+    fastperiod = 5
+    slowperiod = 20
+
+    def init(self):
+        self.fastmovingaverage = self.I(maindicator, data=self.data.Close, period=self.fastperiod)
+        self.slowmovingaverage = self.I(maindicator, data=self.data.Close, period=self.slowperiod)
+
+    def next(self):
+        if self.fastmovingaverage > self.slowmovingaverage:
+            self.buy()
+        elif self.slowmovingaverage > self.fastmovingaverage:
+            self.position.close()
+
+    # def next(self):
+    #     if crossover(self.fastmovingaverage, self.slowmovingaverage):
+    #         self.buy()
+    #     elif crossover(self.slowmovingaverage, self.fastmovingaverage):
+    #         self.position.close()
+
+
+
+
         
 #bt = Backtest(GOOG, RsiOscillator, cash = 10_000)
 #bt = Backtest(BTC, SMA_MovingAverage, cash = 10_000)
 #bt = Backtest(GOOG, ADX, cash = 10_000)
 #bt = Backtest(GOOG, STOCH, cash = 10_000)
 #bt = Backtest(GOOG, MACD, cash=10_000)
-#bt = Backtest(BTC, backtoback, cash=10_000)
-bt = Backtest(BTC, OSMA, cash=10_000)
+#bt = Backtest(BTC, OSMA, cash=10_000)
+bt = Backtest(GOOG, OWNSMA, cash=10_000)
 
+# stats = bt.optimize(
+#     fastperiod = range(5,20,5),
+#     slowperiod = range(15,30,5),
+#     signalperiod = range(3,15,3)
+# )
 
-
-'''
-stats = bt.optimize(
-    upper_bound = range(55, 85, 5),
-    lower_bound = range(10, 45, 5),
-    rsi_window = range(10,30,2),
-    maximize = 'Sharpe Ratio',
+#'''
+# stats = bt.optimize(
+#     upper_bound = range(55, 85, 5),
+#     lower_bound = range(10, 45, 5),
+#     rsi_window = range(10,30,5),
+#     maximize = optim_func)
     # own custom maximization function
     #maximize = optim_func,
     #constraint = lambda param: param.upper_bound > param.lower_bound,
     # less then optimizers that have to be run so randomizes grid search
-    max_tries = 50)
+    #max_tries = 50)
 #print(stats)
-'''
+#'''
 
-# stats = bt.optimize(
-#     fastmovingaverage = range(8,12),
-#     slowmovingaverage = range(46,54),
-#     maximize = 'Sharpe Ratio',#optim_func,
-#     max_tries = 50
-# )
+stats = bt.optimize(
+    fastperiod = range(2,30),
+    slowperiod = range(20,80, 5),
+    maximize = optim_func)
 
-stats = bt.run()
+
+
+#bt.run()
 bt.plot(filename='./tests')
 print(stats)
 print(stats['_strategy'])
-
-    
-    
-
