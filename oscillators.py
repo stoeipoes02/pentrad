@@ -9,6 +9,8 @@ import hashlib
 import uuid
 import json
 
+from pentrad.apikeys import API_KEY, SECRET_KEY
+
 '''
 Issues:
 1. script is v3 instead of v5
@@ -20,8 +22,6 @@ Issues:
 '''
 
 # https://bybit-exchange.github.io/docs/derivatives/contract/place-order
-api_key='Y30aFoxzTGQaCTybPC'
-secret_key='WqCBpR6JfSSkzciYGslKC3fjcjlDrvjsLLWc'
 httpClient=requests.Session()
 recv_window=str(5000)
 url="https://api-testnet.bybit.com"
@@ -31,7 +31,7 @@ def HTTP_Request(endPoint,method,payload,Info):
     time_stamp=str(int(time.time() * 10 ** 3))
     signature=genSignature(payload)
     headers = {
-        'X-BAPI-API-KEY': api_key,
+        'X-BAPI-API-KEY': API_KEY,
         'X-BAPI-SIGN': signature,
         'X-BAPI-SIGN-TYPE': '2',
         'X-BAPI-TIMESTAMP': time_stamp,
@@ -48,8 +48,8 @@ def HTTP_Request(endPoint,method,payload,Info):
     return response.text
 
 def genSignature(payload):
-    param_str= str(time_stamp) + api_key + recv_window + payload
-    hash = hmac.new(bytes(secret_key, "utf-8"), param_str.encode("utf-8"),hashlib.sha256)
+    param_str= str(time_stamp) + API_KEY + recv_window + payload
+    hash = hmac.new(bytes(SECRET_KEY, "utf-8"), param_str.encode("utf-8"),hashlib.sha256)
     signature = hash.hexdigest()
     return signature
 
@@ -159,8 +159,8 @@ if __name__ == "__main__":
 
     #     time.sleep(60)
 
-    print(get_open_positions("BTCUSDT"))
-    #print(create_order("BTCUSDT","Buy","Limit","0.01","10000"))
+    #print(get_open_positions("BTCUSDT"))
+    print(create_order("BTCUSDT","Buy","Limit","0.01","10000"))
 
     pass
 

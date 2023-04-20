@@ -8,9 +8,10 @@ import pandas as pd
 
 '''
 Issues:
-1. optimizing doesnt work properly on sma
+1. when calling backtest through discord cnat define pandas dataframe
 '''
 
+# --------------READING BTC DATA----------------------
 
 # importing daily btc candles from investing.com
 BTC = pd.read_csv('BTChistorical.csv')
@@ -51,8 +52,7 @@ BTC["Volume"] = BTC["Volume"].map(replace_suffix_with_multiplier)
 BTC = BTC.iloc[::-1]
 
 
-
-
+# ----------------STRATEGY CLASSES-----------------
 
 def optim_func(series):
     # make things more fun
@@ -87,19 +87,25 @@ class RsiOscillator(Strategy):
                 self.position.close()
                 self.buy(tp=1.1*price, sl=0.95*price)
 
-class SMA_MovingAverage(Strategy):
-    fastmovingaverage = 10
-    slowmovingaverage = 50
+class MOVINGAVERAGE(Strategy):
+    fastmovingaverage = 12
+    slowmovingaverage = 26
 
     def init(self):
         self.fastmovingaverage = self.I(talib.SMA, self.data.Close, self.fastmovingaverage)
         self.slowmovingaverage = self.I(talib.SMA, self.data.Close, self.slowmovingaverage)
 
     def next(self):
-        if crossover(self.fastmovingaverage,self.slowmovingaverage):
+        if not self.position:
             self.buy()
-        elif crossover(self.slowmovingaverage,self.fastmovingaverage):
+        price = self.data.Close[-1]
+        if crossover(self.fastmovingaverage,self.slowmovingaverage):
             self.position.close()
+            self.buy()
+        elif self.slowmovingaverage > self.fastmovingaverage:
+            if self.position.is_long:
+                self.position.close()
+                self.sell()
 
 class ADX(Strategy):
 
@@ -146,44 +152,6 @@ class MACD(Strategy):
             self.sell()
 
 
-def indicator(data, period=7, multiplier=100):
-    return data.Close.s.pct_change(periods=period) * multiplier
-
-class OSMA(Strategy):
-    period = 7
-    multiplier = 100
-    def init(self):
-        self.pct_change = self.I(indicator, self.data, period=self.period, multiplier=self.multiplier)
-        
-        
-    def next(self):
-        change = self.pct_change[-1]
-
-        if self.position:
-            if change < 0:
-                self.position.close()
-
-        else:
-            if change > 5 and self.pct_change[-2] > 5:
-                self.buy()
-
-
-
-# def maindicator(data, period=5):
-#     # Slice the data to get only the relevant period
-#     data_slice = data[:period]
-#     # Calculate the total of the sliced data
-#     total = sum(data_slice)
-#     # Calculate the simple moving average
-#     sma = total / period
-#     # Return the calculated SMA values as a Series
-#     sma_series = pd.Series([sma] * len(data))
-
-#     return sma_series
-
-
-import numpy as np
-
 def maindicator(data, period=5):
     # Initialize an empty list to store the SMA values
     sma_values = []
@@ -207,12 +175,7 @@ def maindicator(data, period=5):
 
     return sma_series
 
-
-
-
-
 class OWNSMA(Strategy):
-
     fastperiod = 5
     slowperiod = 20
 
@@ -221,57 +184,120 @@ class OWNSMA(Strategy):
         self.slowmovingaverage = self.I(maindicator, data=self.data.Close, period=self.slowperiod)
 
     def next(self):
-        if self.fastmovingaverage > self.slowmovingaverage:
+        if crossover(self.fastmovingaverage, self.slowmovingaverage):
             self.buy()
-        elif self.slowmovingaverage > self.fastmovingaverage:
+        elif crossover(self.slowmovingaverage, self.fastmovingaverage):
             self.position.close()
 
-    # def next(self):
-    #     if crossover(self.fastmovingaverage, self.slowmovingaverage):
-    #         self.buy()
-    #     elif crossover(self.slowmovingaverage, self.fastmovingaverage):
-    #         self.position.close()
 
 
+#((new-old)/old) * 100 
+def osmaindicator(movingaverage, rsi, window, rsi_window):
+    # Initialize an empty list to store the values
+    values = []
+    
+    for i in range(rsi_window, len(movingaverage)):
+        normal_rsi = (rsi[i]-rsi[i-1])/rsi[i-1]
+        normal_sma = (movingaverage[i]-movingaverage[i-1])/movingaverage[i-1]
 
+        values.append(normal_rsi-normal_sma)
+
+    # fill nan values
+    values = [np.nan]*(rsi_window) + values
+    value_series = pd.Series(values)
 
         
-#bt = Backtest(GOOG, RsiOscillator, cash = 10_000)
-#bt = Backtest(BTC, SMA_MovingAverage, cash = 10_000)
-#bt = Backtest(GOOG, ADX, cash = 10_000)
-#bt = Backtest(GOOG, STOCH, cash = 10_000)
-#bt = Backtest(GOOG, MACD, cash=10_000)
-#bt = Backtest(BTC, OSMA, cash=10_000)
-bt = Backtest(GOOG, OWNSMA, cash=10_000)
+    real = talib.SMA(np.array(values), window)
+    
+    
 
+    return value_series, real
+
+class OSMA(Strategy):
+    upper_bound = 70
+    lower_bound = 30
+    rsi_window = 14
+
+    movingaverage = 10
+
+    osma_window = 10
+
+    def init(self):
+        self.movingaverage = self.I(talib.SMA, self.data.Close, self.movingaverage)
+        
+        self.daily_rsi = self.I(talib.RSI, self.data.Close, self.rsi_window)
+
+        self.osma = self.I(osmaindicator, self.movingaverage, self.daily_rsi, self.osma_window, self.rsi_window)
+
+
+    def next(self):        
+        if crossover(self.osma[0],self.osma[1]):
+            self.buy()
+        
+        elif crossover(self.osma[1], self.osma[0]):
+            self.position.close()
+
+
+
+# -------------------BACKTESTING---------------------
+
+
+#bt = Backtest(GOOG, RsiOscillator, cash = 10_000)
+#bt = Backtest(GOOG, MOVINGAVERAGE, cash = 10_000, margin=0.2)
+
+
+
+# -------------------OPTIMIZATION---------------------
+
+# optimization for MOVINGAVERAGE
 # stats = bt.optimize(
-#     fastperiod = range(5,20,5),
-#     slowperiod = range(15,30,5),
-#     signalperiod = range(3,15,3)
+#     fastmovingaverage = range(4,30),
+#     slowmovingaverage = range(20,60,4)
 # )
 
-#'''
+# optimization for OSMA
 # stats = bt.optimize(
-#     upper_bound = range(55, 85, 5),
-#     lower_bound = range(10, 45, 5),
-#     rsi_window = range(10,30,5),
+#     upper_bound = 70,
+#     lower_bound = 30,
+#     rsi_window = range(10,20),
+#     movingaverage = range(5,15),
+#     osma_window = range(5,15)
+# )
+
+# optimization for OWNSMA
+# stats = bt.optimize(
+#     fastperiod = range(5, 30, 5),
+#     slowperiod = range(20, 80, 10),
 #     maximize = optim_func)
-    # own custom maximization function
-    #maximize = optim_func,
-    #constraint = lambda param: param.upper_bound > param.lower_bound,
-    # less then optimizers that have to be run so randomizes grid search
-    #max_tries = 50)
+
+
+# -----------------STATS DISPLAY-------------------
+
+#stats = bt.run()
+# bt.plot(filename='./tests')
 #print(stats)
-#'''
-
-stats = bt.optimize(
-    fastperiod = range(2,30),
-    slowperiod = range(20,80, 5),
-    maximize = optim_func)
+# print(stats['_strategy'])
 
 
+# -----------------DISCORD FUNCTION----------------
+# stock, cash, margin, commission, fast, slow
 
-#bt.run()
-bt.plot(filename='./tests')
-print(stats)
-print(stats['_strategy'])
+def discordbacktest(stock=GOOG, cash=10000, margin=1, commission=0, fast=12, slow=26):
+    class SMA(Strategy):
+        def init(self):
+            self.fast= self.I(talib.SMA, self.data.Close, fast)
+            self.slow = self.I(talib.SMA, self.data.Close, slow)
+        def next(self):
+            if not self.position:
+                self.buy()
+            price = self.data.Close[-1]
+            if crossover(self.fast,self.slow):
+                self.position.close()
+                self.buy()
+            elif self.slow > self.fast:
+                if self.position.is_long:
+                    self.position.close()
+                    self.sell()       
+    bt = Backtest(data=GOOG, strategy=SMA,cash=cash, margin=margin, commission=commission)
+    stats = bt.run()
+    return stats

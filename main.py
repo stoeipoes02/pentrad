@@ -1,15 +1,27 @@
 import discord
 from discord.ext import commands
 from discord import Member
-from discord.ext.commands import has_permissions, BotMissingPermissions
+from discord.ext.commands import has_permissions, MissingPermissions, CommandError
 import json
 import requests
 import asyncio
 import pandas as pd
 import csv
 
+from bektest import discordbacktest
 # importing credentials
-from apikeys import *
+from pentrad.apikeys import *
+
+'''
+Issues:
+1. backtest | link to backtest graph is not present and no server hosts it :(
+2. backtest | url for image is static image
+3. backtest | embed doenst show color of winning/losing backtest (color is static green)
+'''
+
+
+
+
 
 intents = discord.Intents.all()
 intents.members = True
@@ -22,6 +34,31 @@ client = commands.Bot(command_prefix = '!', intents=intents)
 async def on_ready():
     await client.change_presence(status=discord.Status.dnd, activity=discord.Streaming(name='minecraft',url='https://twitch.tv/'))
     print("Bot is ready")
+
+@client.command(descriptiong='lists all commands')
+async def commands(ctx):
+    command_list = []
+    for command in client.commands:
+        command_list.append(command.name)
+    command_list.sort()
+    command_msg = "\n".join(command_list)
+    await ctx.send(f'list of commands {command_msg}')
+
+
+# test command for testing
+# stock=GOOG, cash=10000, margin=1, commission=0, fast=12, slow=26
+@client.command(aliases=['test','back','backrest', 'stock'],description='Simple Moving Average backtest')
+async def backtest(ctx, stock=None, cash=10000, margin=1, commission=0, fast=12, slow=26):
+    values = discordbacktest(stock, cash, margin, commission, fast, slow)
+    
+    embed = discord.Embed(title='SMA Backtest', url='http://127.0.0.1:8000/tests.html', description='Backtest Graph', color=0x4dff4d)
+    embed.set_author(name=ctx.author.name, url='https://www.instagram.com/kick_buur/',icon_url=ctx.author.avatar)
+    embed.set_thumbnail(url='https://learnpriceaction.com/wp-content/uploads/2018/05/candlestick-patterns-PDF.png')
+    embed.add_field(name='profit in %', value=values['Return [%]'], inline=True)
+    embed.set_footer(text='loser')
+
+
+    await ctx.channel.send(embed=embed)
 
 
 # simple test command
@@ -44,7 +81,7 @@ async def joke(ctx):
 
     response = requests.request("GET", url, headers=headers)
     await ctx.send(json.loads(response.text)['body'][0]['setup'])
-    await asyncio.sleep(3)
+    await asyncio.sleep(5)
     await ctx.send(json.loads(response.text)['body'][0]['punchline'])
 
 
@@ -132,10 +169,11 @@ async def message(ctx, user:discord.Member, *, message=None):
 # error exceptions sucha as missingpermissions and unknown commands
 @client.event
 async def on_command_error(ctx, error):
-    if isinstance(error, commands.MissingPermissions):
-        await ctx.send("No permission to run this command")
-    elif isinstance(error, commands.CommandNotFound):
-        await ctx.send("Above command doesn't exist")
+    if isinstance(error, CommandError):
+        if isinstance(error, MissingPermissions):
+            await ctx.send("You don't have permission to do that.")
+        else:
+            await ctx.send("An error occurred: {}".format(str(error)))
 
 
 
