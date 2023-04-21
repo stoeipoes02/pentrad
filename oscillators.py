@@ -115,7 +115,7 @@ def pointsmovingaverage(symbol, interval, starttime, item, slowmoving, fastmovin
 
 
 
-def create_order(symbol, side, orderType, qty, price):
+def create_order(symbol="BTCUSDT", side="Buy", orderType="Limit", qty="0.01", price="10000"):
     endpoint="/contract/v3/private/order/create"
     method="POST"
     orderLinkId=uuid.uuid4().hex
@@ -126,8 +126,7 @@ def create_order(symbol, side, orderType, qty, price):
     return HTTP_Request(endpoint,method,params,"Create")
 
 
-
-def get_open_positions(symbol):
+def get_open_positions(symbol="BTCUSDT"):
     endpoint = "/contract/v3/private/position/list"
     method = "GET"
     params=f'symbol={symbol}'
@@ -136,7 +135,9 @@ def get_open_positions(symbol):
     return position['result']['list'][0]
 
 
-if __name__ == "__main__":
+
+
+#if __name__ == "__main__":
     # while True:
     #     side = get_open_positions("BTCUSDT")
 
@@ -160,9 +161,9 @@ if __name__ == "__main__":
     #     time.sleep(60)
 
     #print(get_open_positions("BTCUSDT"))
-    print(create_order("BTCUSDT","Buy","Limit","0.01","10000"))
+    #print(create_order("BTCUSDT","Buy","Limit","0.01","10000"))
 
-    pass
+#    pass
 
 
 

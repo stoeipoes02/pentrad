@@ -8,7 +8,10 @@ import asyncio
 import pandas as pd
 import csv
 
+# importing own external libraries
 from bektest import discordbacktest
+from oscillators import get_open_positions
+
 # importing credentials
 from pentrad.apikeys import *
 
@@ -35,7 +38,7 @@ async def on_ready():
     await client.change_presence(status=discord.Status.dnd, activity=discord.Streaming(name='minecraft',url='https://twitch.tv/'))
     print("Bot is ready")
 
-@client.command(descriptiong='lists all commands')
+@client.command(description='lists all commands')
 async def commands(ctx):
     command_list = []
     for command in client.commands:
@@ -44,21 +47,6 @@ async def commands(ctx):
     command_msg = "\n".join(command_list)
     await ctx.send(f'list of commands {command_msg}')
 
-
-# test command for testing
-# stock=GOOG, cash=10000, margin=1, commission=0, fast=12, slow=26
-@client.command(aliases=['test','back','backrest', 'stock'],description='Simple Moving Average backtest')
-async def backtest(ctx, stock=None, cash=10000, margin=1, commission=0, fast=12, slow=26):
-    values = discordbacktest(stock, cash, margin, commission, fast, slow)
-    
-    embed = discord.Embed(title='SMA Backtest', url='http://127.0.0.1:8000/tests.html', description='Backtest Graph', color=0x4dff4d)
-    embed.set_author(name=ctx.author.name, url='https://www.instagram.com/kick_buur/',icon_url=ctx.author.avatar)
-    embed.set_thumbnail(url='https://learnpriceaction.com/wp-content/uploads/2018/05/candlestick-patterns-PDF.png')
-    embed.add_field(name='profit in %', value=values['Return [%]'], inline=True)
-    embed.set_footer(text='loser')
-
-
-    await ctx.channel.send(embed=embed)
 
 
 # simple test command
@@ -182,11 +170,11 @@ async def on_command_error(ctx, error):
 
 @client.command()
 async def all_stats(ctx):
-    data = pd.read_csv('game.csv')
+    data = pd.read_csv('pentrad/game.csv')
     embed = discord.Embed(title='Stats', url='https://google.com', description='All Stats', color=0x4dff4d)
 
     for index, row in data.iterrows():
-        embed.add_field(name=row['name'], value=f"Health: {row['health']}\nAttack: {row['attack']}\nGold: {row['gold']}", inline=True)
+        embed.add_field(name=row['name'], value=f"Gold: {row['gold']}", inline=True)
 
     await ctx.send(embed=embed)
 
@@ -194,17 +182,15 @@ async def all_stats(ctx):
 
 @client.command()
 async def solo_stats(ctx, name='kick'):
-    data = pd.read_csv('game.csv')
+    data = pd.read_csv('pentrad/game.csv')
     row = data.loc[data['name'] == name]
 
     # Check if the row exists
     if not row.empty:
         # Get the stats from the row
-        health = row.iloc[0]['health']
-        attack = row.iloc[0]['attack']
         gold = row.iloc[0]['gold']
         # Create the embed with the stats
-        embed = discord.Embed(title=name, description=f"Health: {health}\nAttack: {attack}\nGold: {gold}", color=discord.Color.blue())
+        embed = discord.Embed(title=name, description=f"Gold: {gold}", color=discord.Color.blue())
         await ctx.send(embed=embed)
     else:
         await ctx.send(f"No stats found for {name}")
@@ -212,7 +198,7 @@ async def solo_stats(ctx, name='kick'):
 
 @client.command()
 async def change_stats(ctx, name):
-    with open('game.csv', mode='r') as game:
+    with open('pentrad/game.csv', mode='r') as game:
         game_reader = csv.DictReader(game)
         rows = list(game_reader)
     
@@ -224,7 +210,7 @@ async def change_stats(ctx, name):
     
     if found:
         with open('game.csv', mode='w', newline='') as game:
-            fieldnames = ['name', 'health', 'attack', 'gold']
+            fieldnames = ['name', 'gold']
             game_writer = csv.DictWriter(game, fieldnames=fieldnames)
             game_writer.writeheader()
             game_writer.writerows(rows)
@@ -236,12 +222,27 @@ async def change_stats(ctx, name):
 
 
 
+@client.command(aliases=["pos", "p"], description="lists all open positions")
+async def positions(ctx):
+    open = get_open_positions()
+    await ctx.send(open)
 
-# --- TO-DO-list ---
-# 1. buttons
-# 2. graph
-# 3. tradingbot
-# 4. 
+
+# test command for testing
+# stock=GOOG, cash=10000, margin=1, commission=0, fast=12, slow=26
+@client.command(aliases=['test','back','backrest', 'stock'],description='Simple Moving Average backtest')
+async def backtest(ctx, stock=None, cash=10000, margin=1, commission=0, fast=12, slow=26):
+    values = discordbacktest(stock, cash, margin, commission, fast, slow)
+    
+    embed = discord.Embed(title='SMA Backtest', url='http://127.0.0.1:8000/tests.html', description='Backtest Graph', color=0x4dff4d)
+    embed.set_author(name=ctx.author.name, url='https://www.instagram.com/kick_buur/',icon_url=ctx.author.avatar)
+    embed.set_thumbnail(url='https://learnpriceaction.com/wp-content/uploads/2018/05/candlestick-patterns-PDF.png')
+    embed.add_field(name='profit in %', value=values['Return [%]'], inline=True)
+    embed.set_footer(text='loser')
+
+
+    await ctx.channel.send(embed=embed)
+
 
 
 
