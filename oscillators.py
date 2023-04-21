@@ -99,12 +99,12 @@ def transform(data:list, element:int, types:bool):
 
 
 # returns the last slow and fast moving average values in a list
-def pointsmovingaverage(symbol, interval, starttime, item, slowmoving, fastmoving):
+def pointsmovingaverage(symbol, interval, starttime, element, slowmoving, fastmoving):
     data = getdata(symbol,interval,starttime)
-    transformed_data = transform(data,item,True)
+    transformed_data = transform(data,element,True)
 
-    slow = talib.WMA(transformed_data,slowmoving)
-    fast = talib.WMA(transformed_data,fastmoving)
+    slow = talib.SMA(transformed_data,slowmoving)
+    fast = talib.SMA(transformed_data,fastmoving)
 
     return slow,fast
 
@@ -135,36 +135,28 @@ def get_open_positions(symbol="BTCUSDT"):
     return position['result']['list'][0]
 
 
+# def movingaverage_trade(symbol="BTCUSDT", interval=15, starttime=23400, element=4, slowmoving=26, fastmoving=12):
+#     while True:
+#         side = get_open_positions(symbol)
 
+#         if side == 'None':
+#             print('not in position')
+#         else:
+#             slow, fast = pointsmovingaverage(symbol, interval, starttime, element, slowmoving, fastmoving)
 
-#if __name__ == "__main__":
-    # while True:
-    #     side = get_open_positions("BTCUSDT")
-
-    #     if side == 'None':
-    #         pass
-    #     else:
-    #         slow,fast = pointsmovingaverage("BTCUSDT",15,7200,4,6,3)
-
-    #         if side == "Buy":
-    #             if fast[-1] >= slow[-1]:
-    #                 print('fast above slow')
-    #             else:
-    #                 print('slow above fast')
+#             if side == "Buy":
+#                 if fast[-1] >= slow[-1]:
+#                     print('fast above slow')
+#                 else:
+#                     print('slow above fast')
      
-    #         elif side == "Sell":
-    #             if fast[-1] <= slow[-1]:
-    #                 print('fast under slow')
-    #             else:
-    #                 print('slow under fast')
+#             elif side == "Sell":
+#                 if fast[-1] <= slow[-1]:
+#                     print('fast under slow')
+#                 else:
+#                     print('slow under fast')
 
-    #     time.sleep(60)
-
-    #print(get_open_positions("BTCUSDT"))
-    #print(create_order("BTCUSDT","Buy","Limit","0.01","10000"))
-
-#    pass
-
+#         time.sleep(1)
 
 
 #Get filled orders
