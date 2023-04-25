@@ -8,6 +8,9 @@ import hmac
 import hashlib
 import uuid
 import json
+import csv
+
+import mplfinance as mpf
 
 from pentrad.apikeys import API_KEY, SECRET_KEY
 
@@ -17,8 +20,6 @@ Issues:
 2. list comprehension usage not in script
 3. talib EMA doesn't have the same results as the bybit EMA but SMA and WMA do
 4. talib RSI doesn't have exact result as bybit but is close
-5. weights on point system dont do anything really
-6. using pandas dataframe but has problems like importing 
 '''
 
 # https://bybit-exchange.github.io/docs/derivatives/contract/place-order
@@ -42,13 +43,11 @@ def HTTP_Request(endPoint,method,payload,Info):
         response = httpClient.request(method, url+endPoint, headers=headers, data=payload)
     else:
         response = httpClient.request(method, url+endPoint+"?"+payload, headers=headers)
-    #print(response.text)
-    #print(Info + " Elapsed Time : " + str(response.elapsed))
 
     return response.text
 
 def genSignature(payload):
-    param_str= str(time_stamp) + API_KEY + recv_window + payload
+    param_str = str(time_stamp) + API_KEY + recv_window + payload
     hash = hmac.new(bytes(SECRET_KEY, "utf-8"), param_str.encode("utf-8"),hashlib.sha256)
     signature = hash.hexdigest()
     return signature
@@ -71,12 +70,59 @@ def timedelta(times=3600):
 # symbol: coin to be traded
 # interval: timeframe of candles 1,3,5,15,30,60,120,240,360,720,D,W,M
 # startend: start of time until current time in seconds
-def getdata(symbol="BTCUSDT", interval=60,starttime=3600):
+def getdata(symbol="BTCUSDT", interval=60,starttime=36000):
     starttime = timedelta(starttime)
     link = f'https://api-testnet.bybit.com/derivatives/v3/public/kline?category=linear&symbol={symbol}&interval={interval}&start={starttime[1]}&end={starttime[0]}'
     r = requests.get(link).json()
     data = r['result']['list']
     return data
+
+
+
+def getdataasgraph(symbol="BTCUSDT", interval=60, candles=10, style='yahoo', volume=True):
+    if not isinstance(interval, int):
+        if interval == "D":
+            newinterval = 1440
+        elif interval == "W":
+            newinterval = 10080
+        elif interval == "M":
+            newinterval = 43800
+    else:
+        newinterval = interval 
+    
+    starttime = newinterval * candles * 60
+    data = getdata(symbol, interval, starttime)
+
+    df = pd.DataFrame(data, columns=['date', 'open', 'high', 'low', 'close', 'volume', 'market_cap'])
+
+    df = df.set_index('date')
+    df.index = pd.to_datetime(df.index, unit='ms')
+
+    df['open'] = df['open'].astype(float)
+    df['high'] = df['high'].astype(float)
+    df['low'] = df['low'].astype(float)
+    df['close'] = df['close'].astype(float)
+    df['volume'] = df['volume'].astype(float)
+
+    # https://github.com/matplotlib/mplfinance/blob/master/examples/styles.ipynb
+    fig, ax = mpf.plot(df, type='candle', volume=volume, style=style, show_nontrading=True, returnfig=True)
+
+    # Save the plot as a PNG file
+    filename = f'graphs/{symbol}{interval}{candles}.png'
+    
+    fig.savefig(filename)
+    return filename
+
+# styles
+'''
+classic
+charles
+mike
+blueskies
+starsandstripes
+brasil
+yahoo
+'''
 
 
 
@@ -118,6 +164,7 @@ def pointsmovingaverage(symbol, interval, starttime, element, slowmoving, fastmo
 def create_order(symbol="BTCUSDT", side="Buy", orderType="Limit", qty="0.01", price="10000"):
     endpoint="/contract/v3/private/order/create"
     method="POST"
+    #orderLinkId = f'{symbol};{side};{orderType};{qty};{price}'
     orderLinkId=uuid.uuid4().hex
     params={"symbol": symbol,"side": side,"positionIdx": 0,"orderType": orderType,"qty": qty,"price": price,"timeInForce": "GoodTillCancel","orderLinkId": orderLinkId}
     newparams = json.dumps(params)
@@ -126,37 +173,57 @@ def create_order(symbol="BTCUSDT", side="Buy", orderType="Limit", qty="0.01", pr
     return HTTP_Request(endpoint,method,params,"Create")
 
 
+def set_take_profit():
+    endpoint = "/contract/v3/private/position/trading-stop"
+    method = "POST"
+    params={"symbol": "BNBUSDT","takeProfit": "400","stopLoss": "300","positionIdx": 0}
+    newparams = json.dumps(params)
+    params = newparams.replace('\\','')
+    
+    return HTTP_Request(endpoint,method,params,"set take profit")
+
+
+
+
+# with open('pentrad/users.csv', 'r') as csvfile:
+#     reader = csv.DictReader(csvfile)
+#     for row in reader:
+#         trades = row['activetrades'].split(',')
+        
+#         print(f"User {row['user_id']}: {row['name']}'s trades - {trades}")
+
+
+
+
+
 def get_open_positions(symbol="BTCUSDT"):
     endpoint = "/contract/v3/private/position/list"
     method = "GET"
-    params=f'symbol={symbol}'
-    position = json.loads(HTTP_Request(endpoint,method, params, 'filled orders'))
-    
-    return position['result']['list'][0]
+    params = f'symbol={symbol}'
+    position = json.loads(HTTP_Request(endpoint,method,params,'test positions'))
+    return position
+
+positions = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "XRPUSDT"]
+
+# for i in positions:
+#     print(get_open_positions(symbol=i))
 
 
-# def movingaverage_trade(symbol="BTCUSDT", interval=15, starttime=23400, element=4, slowmoving=26, fastmoving=12):
-#     while True:
-#         side = get_open_positions(symbol)
 
-#         if side == 'None':
-#             print('not in position')
-#         else:
-#             slow, fast = pointsmovingaverage(symbol, interval, starttime, element, slowmoving, fastmoving)
+def PnL(symbol):
+    endpoint = "/contract/v3/private/position/closed-pnl"
+    method = "GET"
+    params = f"symbol={symbol}"
+    winning = json.loads(HTTP_Request(endpoint,method,params,'Profit and Loss'))
+    return winning
 
-#             if side == "Buy":
-#                 if fast[-1] >= slow[-1]:
-#                     print('fast above slow')
-#                 else:
-#                     print('slow above fast')
-     
-#             elif side == "Sell":
-#                 if fast[-1] <= slow[-1]:
-#                     print('fast under slow')
-#                 else:
-#                     print('slow under fast')
+winlist = PnL("BTCUSDT")
 
-#         time.sleep(1)
+newwinlist = winlist['result']['list']
+
+# for items in newwinlist:
+#     print(items['closedPnl'])
+
 
 
 #Get filled orders

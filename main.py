@@ -10,7 +10,7 @@ import csv
 
 # importing own external libraries
 from bektest import discordbacktest
-from oscillators import get_open_positions, create_order
+import oscillators
 
 # importing credentials
 from pentrad.apikeys import *
@@ -21,9 +21,6 @@ Issues:
 2. backtest | url for image is static image
 3. backtest | embed doenst show color of winning/losing backtest (color is static green)
 '''
-
-
-
 
 
 intents = discord.Intents.all()
@@ -38,27 +35,44 @@ async def on_ready():
     await client.change_presence(status=discord.Status.dnd, activity=discord.Streaming(name='minecraft',url='https://twitch.tv/'))
     print("Bot is ready")
 
-@client.command(description='lists all commands')
-async def commands(ctx):
-    command_list = []
-    for command in client.commands:
-        command_list.append(command.name)
-    command_list.sort()
-    command_msg = "\n".join(command_list)
-    await ctx.send(f'list of commands {command_msg}')
+client.remove_command('help') # Remove the default help command
+
+@client.command()
+async def help(ctx, *args):
+    """Displays help about the bot's commands"""
+    if not args:
+        # If no command is specified, show a list of all commands and their descriptions
+        embed = discord.Embed(title="Command List", description="Here's a list of all my commands and their descriptions:")
+        for command in client.commands:
+            embed.add_field(name=command.name, value=command.help, inline=False)
+        await ctx.send(embed=embed)
+    else:
+        # If a command is specified, show the command's aliases and description
+        for command in client.commands:
+            if args[0] == command.name or args[0] in command.aliases:
+                embed = discord.Embed(title=f"Command: {command.name}", description=command.description)
+                if command.aliases:
+                    embed.add_field(name="Aliases", value=", ".join(command.aliases), inline=False)
+                await ctx.send(embed=embed)
+                break
+        else:
+            await ctx.send("That command doesn't exist.")
+
 
 
 
 # simple test command
 @client.command()
 async def hello(ctx):
+    """types a simple hello in the chat"""
     await ctx.send("hello i am bot")
 
 
 
 # dad joke
-@client.command()
+@client.command(aliases=["funny", "jest", "humor"], description="Will tell you a funny dad joke\nExample: !joke")
 async def joke(ctx):
+    """Will type a funny dad joke"""
 
     url = "https://dad-jokes.p.rapidapi.com/random/joke"
 
@@ -76,19 +90,44 @@ async def joke(ctx):
  
 
 # embed
-@client.command()
-async def embed(ctx):
+@client.command(aliases=["testemb", "embedtest"], description="test embed")
+async def testembed(ctx):
 
+# resize image
+    url = "https://www.freepnglogos.com/uploads/cat-png/cat-boarding-24.png?width=500&height=500"
     embed = discord.Embed(title='Dog', url='https://google.com', description='we love dog', color=0x4dff4d)
-    embed.set_author(name=ctx.author.name, url='https://www.instagram.com/kick_buur/',icon_url=ctx.author.avatar)
-    embed.set_thumbnail(url='https://upload.wikimedia.org/wikipedia/commons/thumb/5/58/Sunset_2007-1.jpg/800px-Sunset_2007-1.jpg')
-    embed.add_field(name='currency', value=10, inline=True)
-    embed.add_field(name='items', value='potion', inline=True)
+    #embed.set_author(name=ctx.author.name, url='https://www.instagram.com/kick_buur/',icon_url=ctx.author.avatar)
+    #embed.set_thumbnail(url='https://upload.wikimedia.org/wikipedia/commons/thumb/5/58/Sunset_2007-1.jpg/800px-Sunset_2007-1.jpg')
+    #mbed.add_field(name='currency', value=10, inline=True)
+    #embed.add_field(name='items', value='potion', inline=True)
+    embed.set_image(url=url)
     embed.set_footer(text='bye')
 
     await ctx.channel.send(embed=embed)
 
 
+# @client.command()
+# async def graphembed(ctx):
+#     #graphname = oscillators.getdataasgraph("BTCUSDT", "D", 4, 'yahoo', False)
+#     embed = discord.Embed(title="graph")
+#     embed.set_image(url='http://192.168.178.21:8080/graphs/BTCUSDTD4.png')
+#     await ctx.channel.send(embed=embed)
+
+
+@client.command()
+async def graphembed(ctx):
+    try:
+        graphname = oscillators.getdataasgraph("BTCUSDT", "D", 4, 'yahoo', False)
+        url = 'http://213.73.188.84:8080/BTCUSDTD4.png'
+        embed = discord.Embed(title="graph")
+        embed.add_field(name='http://213.73.188.84:8080/BTCUSDTD4.png', value='hey')
+        embed.set_image(url=url)
+        await ctx.channel.send(embed=embed)
+    except Exception as e:
+        # Log the error
+        print(f"Error: {e}")
+        # Send an error message to the channel
+        await ctx.channel.send("Sorry, there was an error while sending the graph.")
 
 
 
@@ -156,7 +195,7 @@ async def change_stats(ctx, name):
             found = True
     
     if found:
-        with open('game.csv', mode='w', newline='') as game:
+        with open('pentrad/game.csv', mode='w', newline='') as game:
             fieldnames = ['name', 'gold']
             game_writer = csv.DictWriter(game, fieldnames=fieldnames)
             game_writer.writeheader()

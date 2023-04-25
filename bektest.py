@@ -243,13 +243,12 @@ class OSMA(Strategy):
 
 
 #bt = Backtest(GOOG, RsiOscillator, cash = 10_000)
-#bt = Backtest(GOOG, MOVINGAVERAGE, cash = 10_000, margin=0.2)
-
+#bt = Backtest(BTC, MOVINGAVERAGE, cash = 10_000, margin=0.2)
 
 
 # -------------------OPTIMIZATION---------------------
 
-# optimization for MOVINGAVERAGE
+#optimization for MOVINGAVERAGE
 # stats = bt.optimize(
 #     fastmovingaverage = range(4,30),
 #     slowmovingaverage = range(20,60,4)
@@ -275,7 +274,7 @@ class OSMA(Strategy):
 
 #stats = bt.run()
 # bt.plot(filename='./tests')
-#print(stats)
+# print(stats)
 # print(stats['_strategy'])
 
 

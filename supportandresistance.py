@@ -3,7 +3,7 @@ from datetime import datetime
 import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 
-df = pd.read_csv("EURUSD_Candlestick_4_Hour_ASK_05.05.2003-16.10.2021.csv")
+df = pd.read_csv("EURUSD_Candlestick_1_D_ASK_05.05.2003-19.10.2019.csv")
 
 #Check if NA values are in data
 df=df[df['volume']!=0]
