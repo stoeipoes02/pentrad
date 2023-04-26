@@ -108,21 +108,11 @@ def getdataasgraph(symbol="BTCUSDT", interval=60, candles=10, style='yahoo', vol
     fig, ax = mpf.plot(df, type='candle', volume=volume, style=style, show_nontrading=True, returnfig=True)
 
     # Save the plot as a PNG file
-    filename = f'graphs/{symbol}{interval}{candles}.png'
+    filename = f'{symbol}{interval}{candles}.png'
     
-    fig.savefig(filename)
+    fig.savefig(f'graphs/{filename}')
     return filename
 
-# styles
-'''
-classic
-charles
-mike
-blueskies
-starsandstripes
-brasil
-yahoo
-'''
 
 
 
@@ -203,27 +193,14 @@ def get_open_positions(symbol="BTCUSDT"):
     position = json.loads(HTTP_Request(endpoint,method,params,'test positions'))
     return position
 
-positions = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "XRPUSDT"]
-
-# for i in positions:
-#     print(get_open_positions(symbol=i))
 
 
-
-def PnL(symbol):
+def PnL(symbol="BTCUSDT"):
     endpoint = "/contract/v3/private/position/closed-pnl"
     method = "GET"
     params = f"symbol={symbol}"
     winning = json.loads(HTTP_Request(endpoint,method,params,'Profit and Loss'))
     return winning
-
-winlist = PnL("BTCUSDT")
-
-newwinlist = winlist['result']['list']
-
-# for items in newwinlist:
-#     print(items['closedPnl'])
-
 
 
 #Get filled orders
