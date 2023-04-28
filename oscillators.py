@@ -79,18 +79,9 @@ def getdata(symbol="BTCUSDT", interval=60,starttime=36000):
 
 
 
-def getdataasgraph(symbol="BTCUSDT", interval=60, candles=10, style='yahoo', volume=True):
-    if not isinstance(interval, int):
-        if interval == "D":
-            newinterval = 1440
-        elif interval == "W":
-            newinterval = 10080
-        elif interval == "M":
-            newinterval = 43800
-    else:
-        newinterval = interval 
+def getdataasgraph(symbol="BTCUSDT", interval=15, candles=10, style='yahoo', volume=True):
     
-    starttime = newinterval * candles * 60
+    starttime = interval * candles * 60
     data = getdata(symbol, interval, starttime)
 
     df = pd.DataFrame(data, columns=['date', 'open', 'high', 'low', 'close', 'volume', 'market_cap'])
