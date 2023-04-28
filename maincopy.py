@@ -7,12 +7,11 @@ import requests
 import asyncio
 import pandas as pd
 import csv
-import os
 
 
 # importing own external libraries
 from bektest import discordbacktest
-from oscillators import uniquespotcoins
+import oscillators
 
 # importing credentials
 from pentrad.apikeys import *
@@ -27,12 +26,11 @@ Issues:
 '''
 
 
-# ---------------DISCORD BOT SETUP-----------------------#
-
 intents = discord.Intents.all()
 intents.members = True
 
 client = commands.Bot(command_prefix = '!', intents=intents)
+
 
 # bot ready message and status
 @client.event
@@ -47,146 +45,6 @@ client.remove_command('help') # Remove the default help command
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandNotFound):
         await ctx.send("Command likely doesn't exist. :(")
-
-
-@client.command()
-async def prefix(ctx, new_prefix):
-    """Allows users to change the command prefix."""
-    client.command_prefix = new_prefix
-    await ctx.send(f"The command prefix has been changed to {new_prefix}")
-
-
-@client.event
-async def on_guild_join(guild):
-    """Create a new folder when the bot joins a new server."""
-    # Get the ID of the new server
-    server_id = guild.id
-    # Create a new folder for the server if it doesn't already exist
-    if not os.path.exists(f"pentrad/servers/{server_id}"):
-        os.makedirs(f"pentrad/servers/{server_id}")
-
-
-
-
-
-
-
-# -----------------ACTUAL CODE------------------------#
-
-@client.command()
-async def coins(ctx):
-    allsymbolcoins = uniquespotcoins()
-
-    array_string = str(allsymbolcoins)
-
-    embed = discord.Embed(color=0x00ff00)
-    embed.add_field(name="All available coins: ", value=array_string)
-
-    await ctx.send(embed=embed)
-
-
-
-
-@client.command()
-async def setup(ctx):
-
-
-    username = ctx.author.name
-    tag = ctx.author.discriminator
-    user_id = ctx.author.id
-    server_id = ctx.guild.id
-    money = 100
-
-    beginpath = f"pentrad/servers/{server_id}/"
-    userspath = f"{beginpath}users.csv"
-
-
-
-
-    user_exists = False
-    if os.path.exists(userspath):
-        with open(userspath, "r", newline='') as file:
-            reader = csv.reader(file)
-            for row in reader:
-                if row[0] == str(user_id):
-                    user_exists = True
-                    await ctx.send('user already exists')
-                    break
-
-    if not user_exists:
-        if os.path.exists(userspath):
-            with open(userspath, "a", newline='') as file:
-                writer = csv.writer(file)
-                writer.writerow([user_id, username, tag, money]) 
-        else:
-            with open(userspath, "w", newline='') as file:
-                writer = csv.writer(file)
-                writer.writerow(["user_id", "username", "tag", "money"])
-                writer.writerow([user_id, username, tag, money])
-        
-        await ctx.send('account created')
-
-
-
-
-
-
-@client.command()
-async def account(ctx, var=None):
-
-    if var is None:
-        user_id = str(ctx.author.id)
-    else:
-        user_id = var[2:-1]
-
-    server_id = ctx.guild.id
-    # Open the CSV file
-    with open(f'pentrad/servers/{server_id}/users.csv', 'r') as file:
-        # Create a CSV reader object
-        reader = csv.reader(file)
-
-        # Skip the header row
-        next(reader)
-
-        # Loop through the rows and create a message string
-        user_found = False
-        for row in reader:
-            if row[0] == user_id:
-                user_found = True
-                break
-
-        # Send the message to Discord
-        if user_found:
-            user = client.get_user(int(user_id))
-            embed = discord.Embed(title="Account Info", color=discord.Color.blue())
-            embed.add_field(name="Username", value=row[1])
-            embed.add_field(name="Money", value=row[3])
-            embed.set_thumbnail(url=user.avatar)
-            await ctx.send(embed=embed)
-        else:
-            await ctx.send(f"No user with ID {user_id} found.")
-
-
-
-
-# change to color of profile image
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 # simple test command

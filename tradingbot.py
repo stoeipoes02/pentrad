@@ -1,0 +1,4 @@
+'''
+Tradingbot algoritme
+discord integratie
+'''
