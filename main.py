@@ -127,7 +127,28 @@ async def setup(ctx):
         await ctx.send('account created')
 
 
+# color_mapping = {
+#     (0, 100): discord.Color(int("0x3B3B3B", 16)),
+#     (100, 200): discord.Color(int("0xA5855E", 16)),
+#     (200, 300): discord.Color(int("0xCDD3D1", 16)),
+#     (300, 400): discord.Color(int("0xEFD862", 16)),
+#     (400, 500): discord.Color(int("0x3AA1B3", 16)),
+#     (500, 600): discord.Color(int("0xA872EE", 16)),
+#     (600, 700): discord.Color(int("0x389366", 16)),
+#     (700, float('inf')): discord.Color(int("0xB7376F", 16))
+# }
 
+
+color_mapping = {
+    (0, 100, 'Iron'): discord.Color(int("0x3B3B3B", 16)),
+    (100, 200, 'Bronze'): discord.Color(int("0xA5855E", 16)),
+    (200, 300, 'Silver'): discord.Color(int("0xCDD3D1", 16)),
+    (300, 400, 'Gold'): discord.Color(int("0xEFD862", 16)),
+    (400, 500, 'Platinum'): discord.Color(int("0x3AA1B3", 16)),
+    (500, 600, 'Diamond'): discord.Color(int("0xA872EE", 16)),
+    (600, 700, 'Ascendant'): discord.Color(int("0x389366", 16)),
+    (700, float('inf'), 'Immortal'): discord.Color(int("0xB7376F", 16))
+}
 
 
 
@@ -158,7 +179,15 @@ async def account(ctx, var=None):
         # Send the message to Discord
         if user_found:
             user = client.get_user(int(user_id))
-            embed = discord.Embed(title="Account Info", color=discord.Color.blue())
+            money = int(row[3])
+
+            color = discord.Color.light_grey()
+            for key, value in color_mapping.items():
+                if key[0] <= money < key[1]:
+                    color = value
+                    break
+
+            embed = discord.Embed(title="Account Info", color=color)
             embed.add_field(name="Username", value=row[1])
             embed.add_field(name="Money", value=row[3])
             embed.set_thumbnail(url=user.avatar)
@@ -167,15 +196,126 @@ async def account(ctx, var=None):
             await ctx.send(f"No user with ID {user_id} found.")
 
 
+from PIL import Image
+
+@client.command(aliases=['images'])
+async def create_images(ctx):
+    # Loop through each color and create an image
+    if not os.path.exists("pentrad/colors/0-100.png"):
+        for color_range, color_code in color_mapping.items():
+            # Convert discord.Color to RGB tuple
+            color_tuple = color_code.to_rgb()
+
+            # Create a new image with the desired color
+            image = Image.new("RGB", (25, 25), color_tuple)
+
+            # Define the file path for the image
+            file_name = f"{color_range[0]}-{color_range[1]}.png"
+            file_path = os.path.join("pentrad/colors", file_name)
+
+            # Save the image to a file
+            image.save(file_path)
+    else:
+        await ctx.send()
 
 
-# change to color of profile image
+from io import BytesIO
+
+@client.command(aliases=['emo'])
+async def upload_emojis(ctx):
+    # Get the guild object
+    guild = ctx.guild
+
+    # Loop through the color mapping and upload each emoji
+    for color_range, color_code in color_mapping.items():
+        file_name = f"{color_range[0]}-{color_range[1]}"
+        file_path = f"pentrad/colors/{file_name}.png"
+
+        # Read the binary data of the image file
+        with open(file_path, "rb") as f:
+            emoji_image = f.read()
+
+        # Create the emoji name
+        emoji_name = file_name.replace("-", "_")
+
+        # Check if the emoji already exists
+        emoji = discord.utils.get(guild.emojis, name=emoji_name)
+
+        if emoji is not None:
+            await ctx.send(f"Emoji {emoji_name} already exists")
+            continue
+
+        try:
+            # Upload the emoji to the server
+            emoji = await guild.create_custom_emoji(name=emoji_name, image=emoji_image)
+            await ctx.send(f"Created emoji: {emoji.name}")
+        except Exception as e:
+            await ctx.send(f"Failed to create emoji: {e}")
 
 
 
+import csv
+
+@client.command(aliases=['rank'])
+async def rankings(ctx):
+    try:
+        server_id = ctx.guild.id
+        guild = ctx.guild
+        # Read CSV file
+        with open(f'pentrad/servers/{server_id}/users.csv', newline='') as csvfile:
+            reader = csv.DictReader(csvfile)
+            user_list = list(reader)
+
+        # Sort users by their money value
+        user_list.sort(key=lambda x: int(x['money']), reverse=True)
+
+        # Create embed
+        embed = discord.Embed(title='Trader Rankings', color=discord.Color.blurple())
+
+        # Loop through color ranges
+        for start, end, name in color_mapping:
+            # Categorize users in this range
+            users = []
+            for user in user_list:
+                money = int(user['money'])
+                if start <= money < end:
+                    users.append(user)
+
+            # Create field value
+            field_value = ''
+            for user in users:
+                field_value += f"{user['username']} - ${user['money']}\n"
+
+            # Add field to embed
+            emoji_name = f"{start}_{end}.png"
+            emoji = discord.utils.get(guild.emojis, name=emoji_name.split(".")[0])
+            if emoji:
+                embed.add_field(name=f"{name} {start}-{end} {emoji}", value=field_value, inline=False)
+            else:
+                embed.add_field(name=f"{name} {start}-{end}", value=field_value, inline=False)
+
+        await ctx.send(embed=embed)
+
+    except Exception as e:
+        print(e)
 
 
+# @client.command(aliases=['rank'])
+# async def rankings(ctx):
+#     try:
+#         embed = discord.Embed(title='Trader Rankings', color = discord.Color.blurple())
+#         guild = ctx.guild
+#         for start, end, name in color_mapping:
+#             emoji_name = f"{start}_{end}.png"
+#             emoji = discord.utils.get(guild.emojis, name=emoji_name.split(".")[0])
+#             if emoji:
+#                 embed.add_field(name=f"{name} {start}-{end} {emoji}", value=f"player", inline=False)
+#             else:
+#                 embed.add_field(name=f"{name} {start}-{end}", value=f"player", inline=False)
 
+#     except Exception as e:
+#         print(e)
+#     await ctx.send(embed=embed)
 
 
 
