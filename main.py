@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from discord import Member
+#from discord import Member
 #from discord.ext.commands import has_permissions, MissingPermissions
 import json
 import requests
@@ -8,14 +8,20 @@ import asyncio
 import pandas as pd
 import csv
 import os
+from PIL import Image
+#from io import BytesIO
 
 
 # importing own external libraries
 from bektest import discordbacktest
-from oscillators import uniquespotcoins
+from oscillators import uniquespotcoins, getdataasgraph, hotcoins
 
 # importing credentials
 from pentrad.apikeys import *
+
+
+
+
 
 '''
 Issues:
@@ -40,7 +46,6 @@ async def on_ready():
     await client.change_presence(status=discord.Status.dnd, activity=discord.Streaming(name='Minecraft Legends',url='https://twitch.tv/'))
     print("Bot is ready")
 
-client.remove_command('help') # Remove the default help command
 
 
 @client.event
@@ -66,7 +71,27 @@ async def on_guild_join(guild):
         os.makedirs(f"pentrad/servers/{server_id}")
 
 
-
+client.remove_command('help') # Remove the default help command
+@client.command(aliases=["yelp", "elp"], description="Will show you all the commands or more details about one command\n Example: !help hello")
+async def help(ctx, *args):
+    """Displays help about the bot's commands"""
+    if not args:
+        # If no command is specified, show a list of all commands and their descriptions
+        embed = discord.Embed(title="Command List", description="Here's a list of all my commands and their descriptions:")
+        for command in client.commands:
+            embed.add_field(name=command.name, value=command.help, inline=False)
+        await ctx.send(embed=embed)
+    else:
+        # If a command is specified, show the command's aliases and description
+        for command in client.commands:
+            if args[0] == command.name or args[0] in command.aliases:
+                embed = discord.Embed(title=f"Command: {command.name}", description=command.description)
+                if command.aliases:
+                    embed.add_field(name="Aliases", value=", ".join(command.aliases), inline=False)
+                await ctx.send(embed=embed)
+                break
+        else:
+            await ctx.send("That command doesn't exist.")
 
 
 
@@ -74,7 +99,7 @@ async def on_guild_join(guild):
 # -----------------ACTUAL CODE------------------------#
 
 @client.command()
-async def coins(ctx):
+async def allcoins(ctx):
     allsymbolcoins = uniquespotcoins()
 
     array_string = str(allsymbolcoins)
@@ -83,9 +108,26 @@ async def coins(ctx):
     embed.add_field(name="All available coins: ", value=array_string)
 
     await ctx.send(embed=embed)
+    
+@client.command()
+async def coin(ctx, *args):
+    try:
 
+        if not args: # check if args is empty
+            args = ('BTC', 'ETH', 'DOGE', 'XRP') # set default value
+        coindetails = hotcoins(*args)
 
+        for i in coindetails:
+            embed = discord.Embed(title=i['symbol'])
+            embed.add_field(name='Price', value=i['lastPrice'], inline=True)
+            embed.add_field(name='24H High', value=i['highPrice24h'], inline=True)
+            embed.add_field(name='24H Low', value=i['lowPrice24h'], inline=True)
+            embed.add_field(name='Volume', value=i['volume24h'], inline=True)
 
+            await ctx.send(embed=embed)
+
+    except Exception as e:
+        await ctx.send("something went wrong")
 
 @client.command()
 async def setup(ctx):
@@ -127,18 +169,6 @@ async def setup(ctx):
         await ctx.send('account created')
 
 
-# color_mapping = {
-#     (0, 100): discord.Color(int("0x3B3B3B", 16)),
-#     (100, 200): discord.Color(int("0xA5855E", 16)),
-#     (200, 300): discord.Color(int("0xCDD3D1", 16)),
-#     (300, 400): discord.Color(int("0xEFD862", 16)),
-#     (400, 500): discord.Color(int("0x3AA1B3", 16)),
-#     (500, 600): discord.Color(int("0xA872EE", 16)),
-#     (600, 700): discord.Color(int("0x389366", 16)),
-#     (700, float('inf')): discord.Color(int("0xB7376F", 16))
-# }
-
-
 color_mapping = {
     (0, 100, 'Iron'): discord.Color(int("0x3B3B3B", 16)),
     (100, 200, 'Bronze'): discord.Color(int("0xA5855E", 16)),
@@ -149,7 +179,6 @@ color_mapping = {
     (600, 700, 'Ascendant'): discord.Color(int("0x389366", 16)),
     (700, float('inf'), 'Immortal'): discord.Color(int("0xB7376F", 16))
 }
-
 
 
 @client.command()
@@ -176,6 +205,8 @@ async def account(ctx, var=None):
                 user_found = True
                 break
 
+
+        guild = ctx.guild
         # Send the message to Discord
         if user_found:
             user = client.get_user(int(user_id))
@@ -185,21 +216,28 @@ async def account(ctx, var=None):
             for key, value in color_mapping.items():
                 if key[0] <= money < key[1]:
                     color = value
+                    rank = key[2]
+
                     break
+
 
             embed = discord.Embed(title="Account Info", color=color)
             embed.add_field(name="Username", value=row[1])
             embed.add_field(name="Money", value=row[3])
+            embed.add_field(name="winrate", value="placeholder")
+            embed.add_field(name="rank", value = rank)
             embed.set_thumbnail(url=user.avatar)
             await ctx.send(embed=embed)
         else:
             await ctx.send(f"No user with ID {user_id} found.")
 
 
-from PIL import Image
 
-@client.command(aliases=['images'])
-async def create_images(ctx):
+
+@client.command(aliases=['emo'])
+async def upload_emojis(ctx):
+    # Get the guild object
+
     # Loop through each color and create an image
     if not os.path.exists("pentrad/colors/0-100.png"):
         for color_range, color_code in color_mapping.items():
@@ -215,17 +253,11 @@ async def create_images(ctx):
 
             # Save the image to a file
             image.save(file_path)
-    else:
-        await ctx.send()
 
 
-from io import BytesIO
 
-@client.command(aliases=['emo'])
-async def upload_emojis(ctx):
-    # Get the guild object
+
     guild = ctx.guild
-
     # Loop through the color mapping and upload each emoji
     for color_range, color_code in color_mapping.items():
         file_name = f"{color_range[0]}-{color_range[1]}"
@@ -254,7 +286,6 @@ async def upload_emojis(ctx):
 
 
 
-import csv
 
 @client.command(aliases=['rank'])
 async def rankings(ctx):
@@ -300,63 +331,112 @@ async def rankings(ctx):
         print(e)
 
 
-# @client.command(aliases=['rank'])
-# async def rankings(ctx):
-#     try:
-#         embed = discord.Embed(title='Trader Rankings', color = discord.Color.blurple())
-#         guild = ctx.guild
-#         for start, end, name in color_mapping:
-#             emoji_name = f"{start}_{end}.png"
-#             emoji = discord.utils.get(guild.emojis, name=emoji_name.split(".")[0])
-#             if emoji:
-#                 embed.add_field(name=f"{name} {start}-{end} {emoji}", value=f"player", inline=False)
-#             else:
-#                 embed.add_field(name=f"{name} {start}-{end}", value=f"player", inline=False)
 
-#     except Exception as e:
-#         print(e)
-#     await ctx.send(embed=embed)
+class SimpleView(discord.ui.View):
+    def __init__(self, author, **kwargs):
+        super().__init__(**kwargs)
+        self.author_id = author.id
 
+    async def disable_all_items(self):
+        for item in self.children:
+            item.disabled = True
+        await self.message.edit(view=self)
 
+    async def on_timeout(self) -> None:
+        await self.disable_all_items()
 
-
-
+    @discord.ui.button(label="Buy", style=discord.ButtonStyle.success)
+    async def buy(self, interaction: discord.Interaction, button: discord.ui.button):
+        if interaction.user.id == self.author_id:
+            embed = discord.Embed(title='Recommended buy', description='buying bitcoin', color=0x00ff00)
+            await interaction.response.send_message(embed=embed)
 
 
+        self.stop()
+
+    @discord.ui.button(label="Sell", style=discord.ButtonStyle.red)
+    async def sell(self, interaction: discord.Interaction, button: discord.ui.button):
+        if interaction.user.id == self.author_id:
+            embed = discord.Embed(title='Recommended buy', description='selling bitcoin', color=0xff0000)
+            await interaction.response.send_message(embed=embed)
 
 
 
+        self.stop()
 
-
-
-# simple test command
 @client.command()
-async def hello(ctx):
-    """Types a simple hello in the chat"""
-    await ctx.send("hello i am bot")
+async def buy(ctx):
+    view = SimpleView(author=ctx.author, timeout=10)
+    message = await ctx.send('...', view=view)
+    view.message = message
+
+    await view.wait()
+    await view.disable_all_items()
 
 
 
-@client.command(aliases=["yelp", "elp"], description="Will show you all the commands or more details about one command\n Example: !help hello")
-async def help(ctx, *args):
-    """Displays help about the bot's commands"""
-    if not args:
-        # If no command is specified, show a list of all commands and their descriptions
-        embed = discord.Embed(title="Command List", description="Here's a list of all my commands and their descriptions:")
-        for command in client.commands:
-            embed.add_field(name=command.name, value=command.help, inline=False)
-        await ctx.send(embed=embed)
-    else:
-        # If a command is specified, show the command's aliases and description
-        for command in client.commands:
-            if args[0] == command.name or args[0] in command.aliases:
-                embed = discord.Embed(title=f"Command: {command.name}", description=command.description)
-                if command.aliases:
-                    embed.add_field(name="Aliases", value=", ".join(command.aliases), inline=False)
-                await ctx.send(embed=embed)
-                break
-        else:
-            await ctx.send("That command doesn't exist.")
+# class SimpleView(discord.ui.View):
+#     async def disable_all_items(self):
+#         for item in self.children:
+#             item.disabled = True
+#         await self.message.edit(view=self)
+
+
+#     async def on_timeout(self) -> None:
+#         #await self.message.channel.send("Timed Out")
+#         await self.disable_all_items()
+
+
+#     @discord.ui.button(label="Buy", style=discord.ButtonStyle.success)
+#     async def hello(self, interaction: discord.Interaction, button: discord.ui.button):
+#         embed = discord.Embed(title='Recommended buy', description='descrioption', color=0x00ff00)
+
+#         await interaction.response.send_message("Bought more bitcoin")
+#         await interaction.message.channel.send(embed=embed)
+#         self.stop()
+
+#     @discord.ui.button(label="Sell", style=discord.ButtonStyle.red)
+#     async def cancel(self, interaction: discord.Interaction, button: discord.ui.button):
+#         print(interaction.user.id)
+#         print(interaction.message.author.id)
+#         if interaction.user.id == interaction.message.author.id:
+#             await interaction.response.send_message("sold this position")
+#         else:
+#             await interaction.response.send_message("naughty!!! :(")
+#         self.stop()
+
+# @client.command()
+# async def buy(ctx):
+        
+#         view = SimpleView(timeout=6)
+#         message = await ctx.send('...', view=view)
+#         view.message = message
+
+#         await view.wait()
+#         await view.disable_all_items()
+
+
+
+
+
+
+# view the market
+# - graph of market
+
+# create an order
+# - sell or buy
+
+# see open positions
+# select position through
+
+
+
+
+
+
+
+
+
 
 
 
@@ -385,7 +465,7 @@ async def joke(ctx):
 async def graph(ctx, symbol="BTCUSDT", interval=15, candles=10, style="yahoo", volume=True):
     """Displays a chart of your chosen coin"""
     try:
-        graphname = oscillators.getdataasgraph(symbol, interval, candles, style, volume)
+        graphname = getdataasgraph(symbol, interval, candles, style, volume)
         url = f'http://213.73.188.84:8080/{graphname}'
         embed = discord.Embed(title="graph", url=url, description='graph image', color=0x4dff4d)
         embed.set_author(name=ctx.author.name, url='https://www.instagram.com/kick_buur/',icon_url=ctx.author.avatar)
@@ -401,33 +481,33 @@ async def graph(ctx, symbol="BTCUSDT", interval=15, candles=10, style="yahoo", v
 
 
 
-class SimpleView(discord.ui.View):
-    async def disable_all_items(self):
-        for item in self.children:
-            item.disabled = True
-        await self.message.edit(view=self)
+# class SimpleView(discord.ui.View):
+#     async def disable_all_items(self):
+#         for item in self.children:
+#             item.disabled = True
+#         await self.message.edit(view=self)
 
 
-    async def on_timeout(self) -> None:
-        #await self.message.channel.send("Timed Out")
-        await self.disable_all_items()
+#     async def on_timeout(self) -> None:
+#         #await self.message.channel.send("Timed Out")
+#         await self.disable_all_items()
 
 
-    @discord.ui.button(label="Buy", style=discord.ButtonStyle.success)
-    async def hello(self, interaction: discord.Interaction, button: discord.ui.button):
-        embed = discord.Embed(title='Recommended buy', description='descrioption', color=0x00ff00)
+#     @discord.ui.button(label="Buy", style=discord.ButtonStyle.success)
+#     async def hello(self, interaction: discord.Interaction, button: discord.ui.button):
+#         embed = discord.Embed(title='Recommended buy', description='descrioption', color=0x00ff00)
 
-        await interaction.response.send_message("Bought more bitcoin")
-        await interaction.message.channel.send(embed=embed)
-        self.stop()
+#         await interaction.response.send_message("Bought more bitcoin")
+#         await interaction.message.channel.send(embed=embed)
+#         self.stop()
 
-    @discord.ui.button(label="Sell", style=discord.ButtonStyle.red)
-    async def cancel(self, interaction: discord.Interaction, button: discord.ui.button):
-        if interaction.user.id == interaction.message.author.id:
-            await interaction.response.send_message("sold this position")
-        else:
-            await interaction.response.send_message("naughty!!! :(")
-        self.stop()
+#     @discord.ui.button(label="Sell", style=discord.ButtonStyle.red)
+#     async def cancel(self, interaction: discord.Interaction, button: discord.ui.button):
+#         if interaction.user.id == interaction.message.author.id:
+#             await interaction.response.send_message("sold this position")
+#         else:
+#             await interaction.response.send_message("naughty!!! :(")
+#         self.stop()
 
 
 

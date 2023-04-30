@@ -77,6 +77,27 @@ def uniquespotcoins():
 
 
 
+def hotcoins(*args):
+    try:
+        list = []
+        for i in args:
+            coindetails = session.get_tickers(category="spot", symbol=f'{i}USDT')
+            if coindetails['retCode'] == 0:
+                for j in coindetails['result']['list']:
+                    dict = {"symbol":i,
+                            "lastPrice":j['lastPrice'],
+                            "highPrice24h":j["highPrice24h"],
+                            "lowPrice24h":j["lowPrice24h"],
+                            "volume24h":j["volume24h"]}
+                list.append(dict)
+            else:
+                raise Exception(coindetails['retCode'])
+        return list
+
+        
+    except Exception as e:
+        logger.error(str(e))
+        return logger.error(str(e))
 
 
 # Returns current time in milliseconds and the time of x seconds ago since epoch
