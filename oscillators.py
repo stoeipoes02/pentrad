@@ -57,25 +57,25 @@ def uniquespotcoins():
         # queries a list of spot trading pairs
         symbols = session.get_instruments_info(category='spot')
 
+
         # creates a numpy array for the symbols
         symbolsarray = np.array([])
 
         # appends the baseCoin to the numpy array
         if symbols['retCode'] == 0:
             for i in symbols['result']['list']:
-                symbolsarray = np.append(symbolsarray, i['baseCoin'])
+                if i['quoteCoin'] == 'USDT':
+                    symbolsarray = np.append(symbolsarray, i['baseCoin'])
 
         else:
             raise Exception(symbols['retCode'])
 
         return np.unique(symbolsarray)
-
+    
     except Exception as e:
         logger.error(str(e))
 
         return logger.error(str(e))
-
-
 
 def hotcoins(*args):
     try:
@@ -110,13 +110,20 @@ def timedelta(times=3600):
 # Gets the data of bybit api
 # symbol: coin to be traded
 # interval: timeframe of candles 1,3,5,15,30,60,120,240,360,720,D,W,M
-# startend: start of time until current time in seconds
 def getdata(symbol="BTCUSDT", interval=60, starttime=36000):
-    starttime = timedelta(starttime)
-    link = f'https://api-testnet.bybit.com/derivatives/v3/public/kline?category=linear&symbol={symbol}&interval={interval}&start={starttime[1]}&end={starttime[0]}'
-    r = requests.get(link).json()
-    data = r['result']['list']
-    return data
+    endtime, starttime = timedelta(starttime)
+    data = session.get_kline(category="spot",
+                             symbol=symbol,
+                             interval=interval,
+                             start=starttime,
+                             end=endtime)
+    try: 
+        if data['retCode'] == 0:
+            return data['result']['list']
+        
+    except Exception as e:
+        return e
+
 
 
 def getdataasgraph(symbol="BTCUSDT", interval=15, candles=10, style='yahoo', volume=True):
@@ -145,6 +152,14 @@ def getdataasgraph(symbol="BTCUSDT", interval=15, candles=10, style='yahoo', vol
 
     fig.savefig(f'graphs/{filename}')
     return filename
+
+
+def entryprice(symbol="BTC"):
+    symbol = f'{symbol}USDT'
+    tickers = session.get_tickers(category="spot", symbol=symbol)
+    entryprice = tickers['result']['list'][0]['lastPrice']
+    return entryprice
+
 
 
 # Transforms the given list into either a list of lists or a numpy array

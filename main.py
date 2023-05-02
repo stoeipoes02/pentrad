@@ -10,11 +10,13 @@ import csv
 import os
 from PIL import Image
 #from io import BytesIO
+from time import time
+import aiofiles
 
 
 # importing own external libraries
 from bektest import discordbacktest
-from oscillators import uniquespotcoins, getdataasgraph, hotcoins
+from oscillators import uniquespotcoins, getdataasgraph, hotcoins, entryprice
 
 # importing credentials
 from pentrad.apikeys import *
@@ -141,6 +143,7 @@ async def setup(ctx):
 
     beginpath = f"pentrad/servers/{server_id}/"
     userspath = f"{beginpath}users.csv"
+    tradespath = f"{beginpath}trades.csv"
 
 
 
@@ -167,6 +170,16 @@ async def setup(ctx):
                 writer.writerow([user_id, username, tag, money])
         
         await ctx.send('account created')
+
+
+
+
+    if not os.path.exists(tradespath):
+        if not os.path.exists(tradespath):
+            with open(tradespath, "w", newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(["user_id", "timestamp", "symbol", "side", "entryprice", "leverage", "money", "takeprofit", "stoploss"])
+
 
 
 color_mapping = {
@@ -206,7 +219,7 @@ async def account(ctx, var=None):
                 break
 
 
-        guild = ctx.guild
+       # guild = ctx.guild
         # Send the message to Discord
         if user_found:
             user = client.get_user(int(user_id))
@@ -333,9 +346,10 @@ async def rankings(ctx):
 
 
 class SimpleView(discord.ui.View):
-    def __init__(self, author, **kwargs):
+    def __init__(self, author, guild, **kwargs):
         super().__init__(**kwargs)
         self.author_id = author.id
+        self.guild_id = guild.id
 
     async def disable_all_items(self):
         for item in self.children:
@@ -345,92 +359,198 @@ class SimpleView(discord.ui.View):
     async def on_timeout(self) -> None:
         await self.disable_all_items()
 
-    @discord.ui.button(label="Buy", style=discord.ButtonStyle.success)
-    async def buy(self, interaction: discord.Interaction, button: discord.ui.button):
+    @discord.ui.button(label="Long", style=discord.ButtonStyle.success)
+    async def buybutton(self, interaction: discord.Interaction, button: discord.ui.button):
         if interaction.user.id == self.author_id:
             embed = discord.Embed(title='Recommended buy', description='buying bitcoin', color=0x00ff00)
-            await interaction.response.send_message(embed=embed)
 
+            await interaction.response.send_message(embed=embed)
 
         self.stop()
 
-    @discord.ui.button(label="Sell", style=discord.ButtonStyle.red)
-    async def sell(self, interaction: discord.Interaction, button: discord.ui.button):
+    @discord.ui.button(label="Short", style=discord.ButtonStyle.red)
+    async def sellbutton(self, interaction: discord.Interaction, button: discord.ui.button):
         if interaction.user.id == self.author_id:
             embed = discord.Embed(title='Recommended buy', description='selling bitcoin', color=0xff0000)
+
+            with open(f'pentrad/servers/{self.guild_id}/users.csv', 'r') as file:
+                reader = csv.reader(file)
+                
+                user_found = False
+                for row in reader:
+                    if row[0] == str(self.author_id):
+                        total_margin = row[3]
+                        user_found = True
+                        break
+
+            embed.add_field(name='total money', value=total_margin)
+            embed.add_field(name='half of money', value=int(total_margin)/2)
+
+            
             await interaction.response.send_message(embed=embed)
-
-
-
+            
         self.stop()
 
-@client.command()
-async def buy(ctx):
-    view = SimpleView(author=ctx.author, timeout=10)
-    message = await ctx.send('...', view=view)
-    view.message = message
-
-    await view.wait()
-    await view.disable_all_items()
 
 
 
-# class SimpleView(discord.ui.View):
-#     async def disable_all_items(self):
-#         for item in self.children:
-#             item.disabled = True
-#         await self.message.edit(view=self)
 
+@client.command(aliases=["price", "current"],
+            description="Will display a graph of the chosen coin, ***timeframe*** and candles.\n **Example:** !graph *BTC* 15 20 classic False\n Check https://testnet.bybit.com/  for all the available coins.\n Interval is limited to: 1 3 5 15 30 60 120 240 360 720 D M W.\n Candles has a range from 1 - 200.\n Styles are classic, charles, mike, blueskies, starsandstripes, brasil and yahoo.\n Volume is True or False")
+async def graph(ctx, symbol="BTC", interval=15, candles=10, style="yahoo", volume=True):
+    """Displays a chart of your chosen coin"""
+    try:
+        intervallist = [1,3,5,15,30,60,120,240,360,720]
+        if interval not in intervallist:
+            await ctx.send(f"Please use intervals of {intervallist}.")
+            raise Exception
 
-#     async def on_timeout(self) -> None:
-#         #await self.message.channel.send("Timed Out")
-#         await self.disable_all_items()
-
-
-#     @discord.ui.button(label="Buy", style=discord.ButtonStyle.success)
-#     async def hello(self, interaction: discord.Interaction, button: discord.ui.button):
-#         embed = discord.Embed(title='Recommended buy', description='descrioption', color=0x00ff00)
-
-#         await interaction.response.send_message("Bought more bitcoin")
-#         await interaction.message.channel.send(embed=embed)
-#         self.stop()
-
-#     @discord.ui.button(label="Sell", style=discord.ButtonStyle.red)
-#     async def cancel(self, interaction: discord.Interaction, button: discord.ui.button):
-#         print(interaction.user.id)
-#         print(interaction.message.author.id)
-#         if interaction.user.id == interaction.message.author.id:
-#             await interaction.response.send_message("sold this position")
-#         else:
-#             await interaction.response.send_message("naughty!!! :(")
-#         self.stop()
-
-# @client.command()
-# async def buy(ctx):
+        if candles not in range(1, 201):
+            await ctx.send("Please choose x candles between the range 1 - 200.")
+            raise Exception
         
-#         view = SimpleView(timeout=6)
-#         message = await ctx.send('...', view=view)
-#         view.message = message
+        styleslist = ['classic', 'charles', 'mike', 'blueskies', 'starsandstripes', 'brasil', 'yahoo']
+        if style not in styleslist:
+            await ctx.send(f"Please choose a style of {styleslist}.")
+            raise Exception
+        
 
-#         await view.wait()
-#         await view.disable_all_items()
+        newsymbol = symbol
+        symbol = f'{symbol}USDT'
+        graphname = getdataasgraph(symbol, interval, candles, style, volume)
+        url = f'http://213.73.188.84:8080/{graphname}'
+        embed = discord.Embed(title=f"{newsymbol} Graph", color=0x808080)
+        embed.set_author(name=ctx.author.name, url='https://www.instagram.com/kick_buur/',icon_url=ctx.author.avatar)
+        embed.add_field(name='Interval', value=interval)
+        embed.add_field(name='Candles', value=candles)
+        embed.add_field(name='Style', value=style)
+        embed.add_field(name='Volume', value=volume)
+
+        embed.set_image(url=url)
+
+
+        await ctx.channel.send(embed=embed)
+        view = SimpleView(author=ctx.author, guild=ctx.guild, timeout=10)
+        message = await ctx.send(view=view)
+        view.message = message
+        await view.wait()
+        # await view.disable_all_items()
+
+    except Exception as e:
+        # Log the error
+        print(f"Error: {e}")
+        await ctx.channel.send("Sorry, there was an error while sending the graph. It could be that the coin you are requesting doesn't exist. Otherwise feel free to message discord user Kick#6476 about your error.")
+
+
+
+
+
+@client.command(aliases=['open', 'buy'])
+async def opentrade(ctx, symbol="BTC", leverage=1, side="buy", takeprofit=None, stoploss=None):
+    try:
+        async with aiofiles.open(f'pentrad/servers/{ctx.guild.id}/users.csv', 'r') as file:
+            contents = await file.read()
+
+        reader = csv.reader(contents.splitlines())
+
+        for row in reader:
+            if row[0] == str(ctx.author.id):
+                money = row[3]
+                break
+
+        user_id = ctx.author.id
+        timestamp = round(time())
+        entry = entryprice(symbol)
+
+        async with aiofiles.open(f'pentrad/servers/{ctx.guild.id}/trades.csv', mode='r') as file:
+            contents = await file.read()
+            reader = csv.reader(contents.splitlines())
+            for row in reader:
+                if len(row) >= 7 and row[0] == str(user_id) and row[2] == symbol:
+                    await ctx.send(f"You already have an open trade on {symbol}.")
+                    return
+
+        async with aiofiles.open(f'pentrad/servers/{ctx.guild.id}/trades.csv', mode='a', newline='') as file:
+            writer = csv.writer(file)
+            markprice = float(entryprice(symbol))
+
+
+            if leverage not in range(1, 101):
+                await ctx.send("Please use a leverage between 1 and 100")
+                raise Exception
+
+            if side != "buy" and side != "sell":
+                await ctx.send("Please only use 'buy' or 'sell' for a side")
+                raise Exception
+
+
+
+            if side == "buy":
+                if takeprofit is None:
+                    takeprofit = 10_000_000.0
+                if stoploss is None:
+                    stoploss = 0.0
+            elif side == "sell":
+                if takeprofit is None:
+                    takeprofit = 0.0
+                if stoploss is None:
+                    stoploss = 10_000_000.0
+
+
+            if (side == "buy" and (markprice > takeprofit or markprice < stoploss)):
+                await ctx.send(f"wrong {side}")
+                raise Exception
+            if (side == "sell" and (markprice < takeprofit or markprice > stoploss)):
+                await ctx.send(f"wrong")
+                raise Exception
+            
+            await writer.writerow([user_id, timestamp, symbol, side, entry, leverage, money, takeprofit, stoploss])
+
+        await ctx.send(f"Successfully opened a {side} trade on {symbol} with {leverage}x leverage.")
+    
+    except Exception as e:
+        await ctx.send(e)
+
+
+
+@client.command(aliases=['close','sell'])
+async def closetrade(ctx, symbol="BTC"):
+    try:
+        markprice = float(entryprice(symbol))
+
+        with open(f'pentrad/servers/{ctx.guild.id}/trades.csv') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                if row['user_id'] == str(ctx.author.id) and row['symbol'] == symbol:
+                    side = row['side']
+                    leverage = row['leverage']
+                    money = float(row['money'])
+                    entry = float(row['entryprice'])
+
+                    if side == "buy":
+                        profit = (money*int(leverage) / entry) * markprice
+                    elif side == "sell":
+                        profit = abs((money*int(leverage) / entry) * markprice)
+
+                    await ctx.send(f"Profit for {symbol} trade: {float(profit) - float(leverage)*float(money)}")
+
+                    break  # Exit the loop once we find the matching trade
+
+            else:
+                await ctx.send("No trades found for this user and symbol")
+
+    except Exception as e:
+        await ctx.send(e)
 
 
 
 
 
 
-# view the market
-# - graph of market
 
-# create an order
-# - sell or buy
 
 # see open positions
 # select position through
-
-
-
 
 
 
@@ -458,134 +578,81 @@ async def joke(ctx):
     await ctx.send(json.loads(response.text)['body'][0]['punchline'])
 
 
- 
-
-@client.command(aliases=["price", "current"],
-            description="Will display a graph of the chosen coin, ***timeframe*** and candles.\n **Example:** !graph *BTCUSDT* 15 20 classic False\n Check https://testnet.bybit.com/  for all the available coins.\n Interval is limited to: 1 3 5 15 30 60 120 240 360 720 D M W.\n Candles has a range from 1 - 200.\n Styles are classic, charles, mike, blueskies, starsandstripes, brasil and yahoo.\n Volume is True or False")
-async def graph(ctx, symbol="BTCUSDT", interval=15, candles=10, style="yahoo", volume=True):
-    """Displays a chart of your chosen coin"""
-    try:
-        graphname = getdataasgraph(symbol, interval, candles, style, volume)
-        url = f'http://213.73.188.84:8080/{graphname}'
-        embed = discord.Embed(title="graph", url=url, description='graph image', color=0x4dff4d)
-        embed.set_author(name=ctx.author.name, url='https://www.instagram.com/kick_buur/',icon_url=ctx.author.avatar)
-        embed.set_thumbnail(url='https://upload.wikimedia.org/wikipedia/commons/thumb/5/58/Sunset_2007-1.jpg/800px-Sunset_2007-1.jpg')
-        embed.add_field(name='Current value', value='10000')
-        embed.set_image(url=url)
-        embed.set_footer(text="byebye")
-        await ctx.channel.send(embed=embed)
-    except Exception as e:
-        # Log the error
-        print(f"Error: {e}")
-        await ctx.channel.send("Sorry, there was an error while sending the graph. It could be that the coin you are requesting doesn't exist. Otherwise feel free to message discord user Kick#6476 about your error.")
 
 
+# @client.command(aliases=["pos", "p"], description="lists all open positions")
+# async def position(ctx, symbol="BTCUSDT"):
+#     open  = oscillators.get_open_positions(symbol)
+#     if open['retCode'] != 0:
+#         raise Exception(open)
+#     else:
+#         data = open['result']['list'][0]
 
-# class SimpleView(discord.ui.View):
-#     async def disable_all_items(self):
-#         for item in self.children:
-#             item.disabled = True
-#         await self.message.edit(view=self)
+#         unrealisedPnl = data['unrealisedPnl']
+#         side = data['side']
+#         entryPrice = data['entryPrice']
+#         markPrice = data['markPrice']
+#         leverage = data['leverage']
+#         takeProfit = data['takeProfit']
+#         stopLoss = data['stopLoss']
+#         trailingStop = data['trailingStop']
+#         liqPrice = data['liqPrice']
+#         occClosingFee = float(data['occClosingFee'])
+#         positionValue = float(data['positionValue'])
 
 
-#     async def on_timeout(self) -> None:
-#         #await self.message.channel.send("Timed Out")
-#         await self.disable_all_items()
+#         embed = discord.Embed(title=f"coin:***{symbol}*** side:***{side}***", color = 0x00ff00 if float(unrealisedPnl) >= 0 else 0xff0000)
+#         embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar)
+#         embed.add_field(name='profit/loss', value=f"```{unrealisedPnl}```", inline=False)
+
+#         embed.add_field(name='entry price', value=entryPrice, inline=True)
+#         embed.add_field(name='mark price', value=markPrice, inline=True)
+
+#         embed.add_field(name='leverage', value=leverage, inline=False)
+
+#         embed.add_field(name='takeProfit', value=takeProfit, inline=True)
+#         embed.add_field(name='stopLoss', value=stopLoss, inline=True)
+#         embed.add_field(name='trailingStop', value=trailingStop, inline=True)
+#         embed.add_field(name='liqPrice', value=liqPrice, inline=True)
+
+#         embed.add_field(name='closingFee', value=round(occClosingFee, 2), inline=True)
+#         embed.add_field(name='positionValue', value=round(positionValue, 2), inline=True)
+
+#         view = SimpleView(timeout=6)
+#         message = await ctx.send(embed=embed, view=view)
+#         view.message = message
+
+#         await view.wait()
+#         await view.disable_all_items
 
 
-#     @discord.ui.button(label="Buy", style=discord.ButtonStyle.success)
-#     async def hello(self, interaction: discord.Interaction, button: discord.ui.button):
-#         embed = discord.Embed(title='Recommended buy', description='descrioption', color=0x00ff00)
+# @client.command(aliases=["place", "order"], description="place an order of symbol, buy, ordertype, qty, price\n Example: !place_order BTCUSDT Buy Limit 0.01 10000")
+# async def place_order(ctx, symbol="BTCUSDT", side="Buy", orderType="Limit", qty="0.01", price="10000"):
+#     order = oscillators.create_order(symbol="BTCUSDT", side="Buy", orderType="Limit", qty="0.01", price="10000")
+#     await ctx.send(order)
 
-#         await interaction.response.send_message("Bought more bitcoin")
-#         await interaction.message.channel.send(embed=embed)
-#         self.stop()
 
-#     @discord.ui.button(label="Sell", style=discord.ButtonStyle.red)
-#     async def cancel(self, interaction: discord.Interaction, button: discord.ui.button):
-#         if interaction.user.id == interaction.message.author.id:
-#             await interaction.response.send_message("sold this position")
+
+
+
+
+# @client.command(aliases=["losses", "wins", "trades", "history"], description="Will display your profits and losses.")
+# async def winrate(ctx):
+#     profitloss = oscillators.PnL(symbol="BTCUSDT")
+
+
+
+#     negative = []
+#     positive = []
+
+#     for items in profitloss['result']['list']:
+#         item = items['closedPnl']
+#         if float(item) <= 0:
+#             negative.append(item)
 #         else:
-#             await interaction.response.send_message("naughty!!! :(")
-#         self.stop()
+#             positive.append(item)        
 
-
-
-
-
-@client.command(aliases=["pos", "p"], description="lists all open positions")
-async def position(ctx, symbol="BTCUSDT"):
-    open  = oscillators.get_open_positions(symbol)
-    if open['retCode'] != 0:
-        raise Exception(open)
-    else:
-        data = open['result']['list'][0]
-
-        unrealisedPnl = data['unrealisedPnl']
-        side = data['side']
-        entryPrice = data['entryPrice']
-        markPrice = data['markPrice']
-        leverage = data['leverage']
-        takeProfit = data['takeProfit']
-        stopLoss = data['stopLoss']
-        trailingStop = data['trailingStop']
-        liqPrice = data['liqPrice']
-        occClosingFee = float(data['occClosingFee'])
-        positionValue = float(data['positionValue'])
-
-
-        embed = discord.Embed(title=f"coin:***{symbol}*** side:***{side}***", color = 0x00ff00 if float(unrealisedPnl) >= 0 else 0xff0000)
-        embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar)
-        embed.add_field(name='profit/loss', value=f"```{unrealisedPnl}```", inline=False)
-
-        embed.add_field(name='entry price', value=entryPrice, inline=True)
-        embed.add_field(name='mark price', value=markPrice, inline=True)
-
-        embed.add_field(name='leverage', value=leverage, inline=False)
-
-        embed.add_field(name='takeProfit', value=takeProfit, inline=True)
-        embed.add_field(name='stopLoss', value=stopLoss, inline=True)
-        embed.add_field(name='trailingStop', value=trailingStop, inline=True)
-        embed.add_field(name='liqPrice', value=liqPrice, inline=True)
-
-        embed.add_field(name='closingFee', value=round(occClosingFee, 2), inline=True)
-        embed.add_field(name='positionValue', value=round(positionValue, 2), inline=True)
-
-        view = SimpleView(timeout=6)
-        message = await ctx.send(embed=embed, view=view)
-        view.message = message
-
-        await view.wait()
-        await view.disable_all_items
-
-
-@client.command(aliases=["place", "order"], description="place an order of symbol, buy, ordertype, qty, price\n Example: !place_order BTCUSDT Buy Limit 0.01 10000")
-async def place_order(ctx, symbol="BTCUSDT", side="Buy", orderType="Limit", qty="0.01", price="10000"):
-    order = oscillators.create_order(symbol="BTCUSDT", side="Buy", orderType="Limit", qty="0.01", price="10000")
-    await ctx.send(order)
-
-
-
-
-
-
-@client.command(aliases=["losses", "wins", "trades", "history"], description="Will display your profits and losses.")
-async def winrate(ctx):
-    profitloss = oscillators.PnL(symbol="BTCUSDT")
-
-
-
-    negative = []
-    positive = []
-
-    for items in profitloss['result']['list']:
-        item = items['closedPnl']
-        if float(item) <= 0:
-            negative.append(item)
-        else:
-            positive.append(item)        
-
-    await ctx.send(positive)
+#     await ctx.send(positive)
 
 
 
@@ -594,62 +661,6 @@ async def winrate(ctx):
 async def message(ctx, user:discord.Member, *, message=None):
     message = f'hey there {ctx.author} wants to say hello'
     await user.send(message)
-
-@client.command()
-async def all_stats(ctx):
-    data = pd.read_csv('pentrad/game.csv')
-    embed = discord.Embed(title='Stats', url='https://google.com', description='All Stats', color=0x4dff4d)
-
-    for index, row in data.iterrows():
-        embed.add_field(name=row['name'], value=f"Gold: {row['gold']}", inline=True)
-
-    await ctx.send(embed=embed)
-
-
-
-@client.command()
-async def solo_stats(ctx, name='kick'):
-    data = pd.read_csv('pentrad/game.csv')
-    row = data.loc[data['name'] == name]
-
-    # Check if the row exists
-    if not row.empty:
-        # Get the stats from the row
-        gold = row.iloc[0]['gold']
-        # Create the embed with the stats
-        embed = discord.Embed(title=name, description=f"Gold: {gold}", color=discord.Color.blue())
-        await ctx.send(embed=embed)
-    else:
-        await ctx.send(f"No stats found for {name}")
-
-
-@client.command()
-async def change_stats(ctx, name):
-    with open('pentrad/game.csv', mode='r') as game:
-        game_reader = csv.DictReader(game)
-        rows = list(game_reader)
-    
-    found = False
-    for row in rows:
-        if row['name'] == name:
-            row['gold'] = str(int(row['gold']) + 10)
-            found = True
-    
-    if found:
-        with open('pentrad/game.csv', mode='w', newline='') as game:
-            fieldnames = ['name', 'gold']
-            game_writer = csv.DictWriter(game, fieldnames=fieldnames)
-            game_writer.writeheader()
-            game_writer.writerows(rows)
-        await ctx.send(f"{name} now has 10 more gold!")
-    else:
-        await ctx.send(f"{name} not found in the game.")
-
-
-
-
-
-
 
 
 
