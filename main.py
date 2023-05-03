@@ -223,7 +223,7 @@ async def account(ctx, var=None):
         # Send the message to Discord
         if user_found:
             user = client.get_user(int(user_id))
-            money = int(row[3])
+            money = float(row[3])
 
             color = discord.Color.light_grey()
             for key, value in color_mapping.items():
@@ -434,7 +434,7 @@ async def graph(ctx, symbol="BTC", interval=15, candles=10, style="yahoo", volum
         message = await ctx.send(view=view)
         view.message = message
         await view.wait()
-        # await view.disable_all_items()
+        #await view.disable_all_items()
 
     except Exception as e:
         # Log the error
@@ -446,7 +446,7 @@ async def graph(ctx, symbol="BTC", interval=15, candles=10, style="yahoo", volum
 
 
 @client.command(aliases=['open', 'buy'])
-async def opentrade(ctx, symbol="BTC", leverage=1, side="buy", takeprofit=None, stoploss=None):
+async def opentrade(ctx, symbol="BTC", margin=50, leverage=1, side="buy", takeprofit=None, stoploss=None):
     try:
         async with aiofiles.open(f'pentrad/servers/{ctx.guild.id}/users.csv', 'r') as file:
             contents = await file.read()
@@ -458,6 +458,7 @@ async def opentrade(ctx, symbol="BTC", leverage=1, side="buy", takeprofit=None, 
                 money = row[3]
                 break
 
+        
         user_id = ctx.author.id
         timestamp = round(time())
         entry = entryprice(symbol)
@@ -469,44 +470,70 @@ async def opentrade(ctx, symbol="BTC", leverage=1, side="buy", takeprofit=None, 
                 if len(row) >= 7 and row[0] == str(user_id) and row[2] == symbol:
                     await ctx.send(f"You already have an open trade on {symbol}.")
                     return
+                
+
+        # make sure money is checked now its not!
+        if margin > float(money):
+            await ctx.send(f"Please adjust your margin: {margin} as you only have money: {money}")
+            raise Exception
+
+        if leverage not in range(1, 101):
+            await ctx.send("Please use a leverage between 1 and 100")
+            raise Exception
+
+        if side != "buy" and side != "sell":
+            await ctx.send("Please only use 'buy' or 'sell' for a side")
+            raise Exception
+
+
+
+        if side == "buy":
+            if takeprofit is None:
+                takeprofit = 10_000_000.0
+            if stoploss is None:
+                stoploss = 0.0
+        elif side == "sell":
+            if takeprofit is None:
+                takeprofit = 0.0
+            if stoploss is None:
+                stoploss = 10_000_000.0
+
+
+        markprice = float(entryprice(symbol))
+        if (side == "buy" and (markprice > takeprofit or markprice < stoploss)):
+            await ctx.send(f"wrong {side}")
+            raise Exception
+        if (side == "sell" and (markprice < takeprofit or markprice > stoploss)):
+            await ctx.send(f"wrong")
+            raise Exception
+
+
 
         async with aiofiles.open(f'pentrad/servers/{ctx.guild.id}/trades.csv', mode='a', newline='') as file:
             writer = csv.writer(file)
-            markprice = float(entryprice(symbol))
-
-
-            if leverage not in range(1, 101):
-                await ctx.send("Please use a leverage between 1 and 100")
-                raise Exception
-
-            if side != "buy" and side != "sell":
-                await ctx.send("Please only use 'buy' or 'sell' for a side")
-                raise Exception
-
-
-
-            if side == "buy":
-                if takeprofit is None:
-                    takeprofit = 10_000_000.0
-                if stoploss is None:
-                    stoploss = 0.0
-            elif side == "sell":
-                if takeprofit is None:
-                    takeprofit = 0.0
-                if stoploss is None:
-                    stoploss = 10_000_000.0
-
-
-            if (side == "buy" and (markprice > takeprofit or markprice < stoploss)):
-                await ctx.send(f"wrong {side}")
-                raise Exception
-            if (side == "sell" and (markprice < takeprofit or markprice > stoploss)):
-                await ctx.send(f"wrong")
-                raise Exception
             
-            await writer.writerow([user_id, timestamp, symbol, side, entry, leverage, money, takeprofit, stoploss])
+            await writer.writerow([user_id, timestamp, symbol, side, entry, leverage, margin, takeprofit, stoploss])
 
-        await ctx.send(f"Successfully opened a {side} trade on {symbol} with {leverage}x leverage.")
+
+            async with aiofiles.open(f'pentrad/servers/{ctx.guild.id}/users.csv', 'r') as file:
+                contents = await file.read()
+
+            rows = contents.splitlines()
+
+            for i, row in enumerate(rows):
+                columns = row.split(',')
+                if columns[0] == str(ctx.author.id):
+                    money = float(columns[3])
+                    columns[3] = f'{money-margin}'  # set the money value to 50
+                rows[i] = ','.join(columns)
+
+            new_contents = '\n'.join(rows)
+
+            async with aiofiles.open(f'pentrad/servers/{ctx.guild.id}/users.csv', 'w') as file:
+                await file.write(new_contents)
+
+
+        await ctx.send(f"Successfully opened a {margin} {side} trade on {symbol} with {leverage}x leverage.")
     
     except Exception as e:
         await ctx.send(e)
@@ -529,10 +556,61 @@ async def closetrade(ctx, symbol="BTC"):
 
                     if side == "buy":
                         profit = (money*int(leverage) / entry) * markprice
-                    elif side == "sell":
-                        profit = abs((money*int(leverage) / entry) * markprice)
+                        actualprofit = float(profit) - float(leverage)*float(money)
 
-                    await ctx.send(f"Profit for {symbol} trade: {float(profit) - float(leverage)*float(money)}")
+
+                    elif side == "sell":
+                        profit = (money*int(leverage) / entry) * markprice
+                        num = profit-(float(money)*float(leverage))
+                        actualprofit = abs(num) if num < 0 else num * -1 
+
+                    embed_color = 0x00FF00 if actualprofit >= 0 else 0xFF0000
+
+                    embed = discord.Embed(title=f"{symbol} trade closed", color=embed_color)
+                    embed.add_field(name="profit" if actualprofit >= 0 else "loss", value = round(actualprofit, 4))
+                    embed.add_field(name="money", value=money+actualprofit)
+                    await ctx.send(embed=embed)
+
+
+                    # write profit or loss to users.csv
+                    async with aiofiles.open(f'pentrad/servers/{ctx.guild.id}/users.csv', 'r') as file:
+                        contents = await file.read()
+
+                    rows = contents.splitlines()
+
+                    for i, row in enumerate(rows):
+                        columns = row.split(',')
+                        if columns[0] == str(ctx.author.id):
+                            accountmoney = float(columns[3])
+                            columns[3] = str(money + accountmoney + actualprofit)  # add the profit to the existing money value
+                        rows[i] = ','.join(columns)
+
+                    new_contents = '\n'.join(rows)
+
+                    async with aiofiles.open(f'pentrad/servers/{ctx.guild.id}/users.csv', 'w') as file:
+                        await file.write(new_contents)
+
+
+
+
+                    async with aiofiles.open(f'pentrad/servers/{ctx.guild.id}/trades.csv', 'r') as file:
+                        contents = await file.read()
+
+                    rows = contents.splitlines()
+
+                    # Use a list comprehension to filter out the rows that match the user id and symbol
+                    rows = [row for row in rows if not (row.split(',')[0] == str(ctx.author.id) and row.split(',')[2] == symbol)]
+
+                    # Add a newline character at the end of the first row (the columns)
+                    rows[0] += '\n'
+
+                    new_contents = '\n'.join(rows)
+
+                    async with aiofiles.open(f'pentrad/servers/{ctx.guild.id}/trades.csv', 'w') as file:
+                        await file.write(new_contents)
+
+
+
 
                     break  # Exit the loop once we find the matching trade
 
@@ -541,6 +619,7 @@ async def closetrade(ctx, symbol="BTC"):
 
     except Exception as e:
         await ctx.send(e)
+
 
 
 
