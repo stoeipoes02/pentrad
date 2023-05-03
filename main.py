@@ -45,7 +45,7 @@ client = commands.Bot(command_prefix = '!', intents=intents)
 # bot ready message and status
 @client.event
 async def on_ready():
-    await client.change_presence(status=discord.Status.dnd, activity=discord.Streaming(name='Minecraft Legends',url='https://twitch.tv/'))
+    await client.change_presence(status=discord.Status.dnd, activity=discord.Streaming(name='!tutorial to get started',url='https://twitch.tv/'))
     print("Bot is ready")
 
 
@@ -56,7 +56,7 @@ async def on_command_error(ctx, error):
         await ctx.send("Command likely doesn't exist. :(")
 
 
-@client.command()
+@client.command(aliases=['pref'], description="Allows users to change the command prefix using !prefix x (x can be any character)")
 async def prefix(ctx, new_prefix):
     """Allows users to change the command prefix."""
     client.command_prefix = new_prefix
@@ -74,7 +74,7 @@ async def on_guild_join(guild):
 
 
 client.remove_command('help') # Remove the default help command
-@client.command(aliases=["yelp", "elp"], description="Will show you all the commands or more details about one command\n Example: !help hello")
+@client.command(aliases=["yelp", "elp"], description="Will show you all the commands or more details about one command\n Example: !help setup")
 async def help(ctx, *args):
     """Displays help about the bot's commands"""
     if not args:
@@ -98,10 +98,25 @@ async def help(ctx, *args):
 
 
 
+@client.command(aliases=['tuto'], description='Walks you through the usage of the bot')
+async def tutorial(ctx):
+    beginningtext = "With this bot you can test trading in crypto's and see who's the best among your friends!"
+    text = "I would recommend to use the commands in the following order\n 1. ***allcoins*** (to see which coins you would like to pick)\n 2. ***coin*** (to get a bit more information about a single coin)\n 3. ***opentrade*** (to open a trade)\n 4. ***positions*** (to see all your open positions)\n 5. ***closetrade*** (to close a trade)\n There are some optional commands which could give you some more insight into the data such as graph (to view a candlestick chart of the coin)\n If you want to see where you are in the ranking you can always use rankings"
+
+    embed = discord.Embed(title="Tutorial")
+    embed.add_field(name="Summary", value=beginningtext, inline=False)
+    embed.add_field(name="Help", value=text, inline=False)
+    embed.add_field(name="Contact", value="If you are unsure how to use a command or would like to know more information about a command you can always use ***help opentrade*** (any other command will work).\n If you have some questions or any other thing you would like to share you can always visit the github: https://github.com/stoeipoes02/pentrad or message me on discord at Kick#6476")
+
+    await ctx.send(embed=embed)
+
+
+
 # -----------------ACTUAL CODE------------------------#
 
-@client.command()
+@client.command(aliases=['all', 'everything'])
 async def allcoins(ctx):
+    """Displays all the tradable coins"""
     allsymbolcoins = uniquespotcoins()
 
     array_string = str(allsymbolcoins)
@@ -111,8 +126,9 @@ async def allcoins(ctx):
 
     await ctx.send(embed=embed)
     
-@client.command()
+@client.command(aliases=['c', 'dabloon', 'crypto', 'currency'], description="Displays information about the coin by using !coin BTC ETH (can be a single coin or multiple)")
 async def coin(ctx, *args):
+    """Displays information about a chosen coin(s)"""
     try:
 
         if not args: # check if args is empty
@@ -131,9 +147,9 @@ async def coin(ctx, *args):
     except Exception as e:
         await ctx.send("something went wrong")
 
-@client.command()
+@client.command(aliases=['start'], description='Use !setup to set up your account')
 async def setup(ctx):
-
+    """Use this command to setup your trading account."""
 
     username = ctx.author.name
     tag = ctx.author.discriminator
@@ -194,8 +210,9 @@ color_mapping = {
 }
 
 
-@client.command()
+@client.command(aliases=['acc', ''], description='Use !account to see your own stats or !account @user to display their information')
 async def account(ctx, var=None):
+    """Displays information about your account or someone else's"""
 
     if var is None:
         user_id = str(ctx.author.id)
@@ -247,8 +264,9 @@ async def account(ctx, var=None):
 
 
 
-@client.command(aliases=['emo'])
+@client.command(aliases=['upload', 'emojis'], description="Mannualy uploads rank emoji's to the server incase something went wrong during 'setup'")
 async def upload_emojis(ctx):
+    """Mannualy uploads rank emoji's to the server incase something went wrong during 'setup'"""
     # Get the guild object
 
     # Loop through each color and create an image
@@ -300,8 +318,9 @@ async def upload_emojis(ctx):
 
 
 
-@client.command(aliases=['rank'])
+@client.command(aliases=['rank', 'leaderboard'], description='Displays the leaderboard of all the users in the server when using !rankings')
 async def rankings(ctx):
+    """Displays the leaderboard of the server"""
     try:
         server_id = ctx.guild.id
         guild = ctx.guild
@@ -311,7 +330,7 @@ async def rankings(ctx):
             user_list = list(reader)
 
         # Sort users by their money value
-        user_list.sort(key=lambda x: int(x['money']), reverse=True)
+        user_list.sort(key=lambda x: float(x['money']), reverse=True)
 
         # Create embed
         embed = discord.Embed(title='Trader Rankings', color=discord.Color.blurple())
@@ -321,7 +340,7 @@ async def rankings(ctx):
             # Categorize users in this range
             users = []
             for user in user_list:
-                money = int(user['money'])
+                money = float(user['money'])
                 if start <= money < end:
                     users.append(user)
 
@@ -394,7 +413,6 @@ class SimpleView(discord.ui.View):
 
 
 
-
 @client.command(aliases=["price", "current"],
             description="Will display a graph of the chosen coin, ***timeframe*** and candles.\n **Example:** !graph *BTC* 15 20 classic False\n Check https://testnet.bybit.com/  for all the available coins.\n Interval is limited to: 1 3 5 15 30 60 120 240 360 720 D M W.\n Candles has a range from 1 - 200.\n Styles are classic, charles, mike, blueskies, starsandstripes, brasil and yahoo.\n Volume is True or False")
 async def graph(ctx, symbol="BTC", interval=15, candles=10, style="yahoo", volume=True):
@@ -444,9 +462,9 @@ async def graph(ctx, symbol="BTC", interval=15, candles=10, style="yahoo", volum
 
 
 
-
-@client.command(aliases=['open', 'buy'])
-async def opentrade(ctx, symbol="BTC", margin=50, leverage=1, side="buy", takeprofit=None, stoploss=None):
+@client.command(aliases=['open', 'buy'], description='Opens a trade on specified coin, margin(money), leverage, side, takeprofit and stoploss\n Example: !opentrade BTC 20 5 buy 30000 20000')
+async def opentrade(ctx, symbol="BTC", margin=20, leverage=1, side="buy", takeprofit=None, stoploss=None):
+    """Opens a trade"""
     try:
         async with aiofiles.open(f'pentrad/servers/{ctx.guild.id}/users.csv', 'r') as file:
             contents = await file.read()
@@ -474,7 +492,7 @@ async def opentrade(ctx, symbol="BTC", margin=50, leverage=1, side="buy", takepr
 
         # make sure money is checked now its not!
         if margin > float(money):
-            await ctx.send(f"Please adjust your margin: {margin} as you only have money: {money}")
+            await ctx.send(f"Please adjust your entry balance of: {margin} as you only have: {money}")
             raise Exception
 
         if leverage not in range(1, 101):
@@ -540,8 +558,10 @@ async def opentrade(ctx, symbol="BTC", margin=50, leverage=1, side="buy", takepr
 
 
 
-@client.command(aliases=['close','sell'])
+
+@client.command(aliases=['close','sell'], description="Closes a trade based on the chosen coin\n Example: !closetrade BTC")
 async def closetrade(ctx, symbol="BTC"):
+    """Closes a position"""
     try:
         markprice = float(entryprice(symbol))
 
@@ -623,20 +643,84 @@ async def closetrade(ctx, symbol="BTC"):
 
 
 
+@client.command(aliases=['pos', 'list'], description="Lists all open positions, or a single if coin is chosen\n Example: !positions BTC")
+async def positions(ctx, symbol=None):
+    """Lists all positions"""
+
+    if symbol == None:
+        with open(f'pentrad/servers/{ctx.guild.id}/trades.csv') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                if row['user_id'] == str(ctx.author.id):
+                    side = row['side']
+                    leverage = row['leverage']
+                    money = float(row['money'])
+                    entry = float(row['entryprice'])
+                    symbol = str(row['symbol'])
+                    
+                    markprice = float(entryprice(symbol))
+
+                    if side == "buy":
+                        profit = (money*int(leverage) / entry) * markprice
+                        actualprofit = float(profit) - float(leverage)*float(money)
 
 
+                    elif side == "sell":
+                        profit = (money*int(leverage) / entry) * markprice
+                        num = profit-(float(money)*float(leverage))
+                        actualprofit = abs(num) if num < 0 else num * -1
+
+                    embed_color = 0x00FF00 if actualprofit >= 0 else 0xFF0000
+                    embed = discord.Embed(title="Open positions", color=embed_color)
+
+                    embed.add_field(name="Coin", value=symbol)
+                    embed.add_field(name="Side", value=side)
+                    embed.add_field(name="Position Value", value=money)
+                    embed.add_field(name="Leverage", value=leverage)
+                    embed.add_field(name="Entry Price", value=entry)
+                    embed.add_field(name="Mark Price", value=markprice)
+
+                    embed.add_field(name="profit" if actualprofit >= 0 else "loss", value = round(actualprofit, 4))
+
+                    await ctx.send(embed=embed)
+    else:
+        with open(f'pentrad/servers/{ctx.guild.id}/trades.csv') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                if row['user_id'] == str(ctx.author.id) and row['symbol'] == symbol:
+                    side = row['side']
+                    leverage = row['leverage']
+                    money = float(row['money'])
+                    entry = float(row['entryprice'])
+                    symbol = str(row['symbol'])
+                    
+                    markprice = float(entryprice(symbol))
+
+                    if side == "buy":
+                        profit = (money*int(leverage) / entry) * markprice
+                        actualprofit = float(profit) - float(leverage)*float(money)
 
 
+                    elif side == "sell":
+                        profit = (money*int(leverage) / entry) * markprice
+                        num = profit-(float(money)*float(leverage))
+                        actualprofit = abs(num) if num < 0 else num * -1
 
-# see open positions
-# select position through
+                    embed_color = 0x00FF00 if actualprofit >= 0 else 0xFF0000
+                    embed = discord.Embed(title="Open positions", color=embed_color)
 
+                    embed.add_field(name="Coin", value=symbol)
+                    embed.add_field(name="Side", value=side)
+                    embed.add_field(name="Position Value", value=money)
+                    embed.add_field(name="Leverage", value=leverage)
+                    embed.add_field(name="Entry Price", value=entry)
+                    embed.add_field(name="Mark Price", value=markprice)
 
+                    embed.add_field(name="profit" if actualprofit >= 0 else "loss", value = round(actualprofit, 4))
 
+                    await ctx.send(embed=embed)
 
-
-
-
+    
 
 
 # dad joke
@@ -659,95 +743,10 @@ async def joke(ctx):
 
 
 
-# @client.command(aliases=["pos", "p"], description="lists all open positions")
-# async def position(ctx, symbol="BTCUSDT"):
-#     open  = oscillators.get_open_positions(symbol)
-#     if open['retCode'] != 0:
-#         raise Exception(open)
-#     else:
-#         data = open['result']['list'][0]
-
-#         unrealisedPnl = data['unrealisedPnl']
-#         side = data['side']
-#         entryPrice = data['entryPrice']
-#         markPrice = data['markPrice']
-#         leverage = data['leverage']
-#         takeProfit = data['takeProfit']
-#         stopLoss = data['stopLoss']
-#         trailingStop = data['trailingStop']
-#         liqPrice = data['liqPrice']
-#         occClosingFee = float(data['occClosingFee'])
-#         positionValue = float(data['positionValue'])
-
-
-#         embed = discord.Embed(title=f"coin:***{symbol}*** side:***{side}***", color = 0x00ff00 if float(unrealisedPnl) >= 0 else 0xff0000)
-#         embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar)
-#         embed.add_field(name='profit/loss', value=f"```{unrealisedPnl}```", inline=False)
-
-#         embed.add_field(name='entry price', value=entryPrice, inline=True)
-#         embed.add_field(name='mark price', value=markPrice, inline=True)
-
-#         embed.add_field(name='leverage', value=leverage, inline=False)
-
-#         embed.add_field(name='takeProfit', value=takeProfit, inline=True)
-#         embed.add_field(name='stopLoss', value=stopLoss, inline=True)
-#         embed.add_field(name='trailingStop', value=trailingStop, inline=True)
-#         embed.add_field(name='liqPrice', value=liqPrice, inline=True)
-
-#         embed.add_field(name='closingFee', value=round(occClosingFee, 2), inline=True)
-#         embed.add_field(name='positionValue', value=round(positionValue, 2), inline=True)
-
-#         view = SimpleView(timeout=6)
-#         message = await ctx.send(embed=embed, view=view)
-#         view.message = message
-
-#         await view.wait()
-#         await view.disable_all_items
-
-
-# @client.command(aliases=["place", "order"], description="place an order of symbol, buy, ordertype, qty, price\n Example: !place_order BTCUSDT Buy Limit 0.01 10000")
-# async def place_order(ctx, symbol="BTCUSDT", side="Buy", orderType="Limit", qty="0.01", price="10000"):
-#     order = oscillators.create_order(symbol="BTCUSDT", side="Buy", orderType="Limit", qty="0.01", price="10000")
-#     await ctx.send(order)
-
-
-
-
-
-
-# @client.command(aliases=["losses", "wins", "trades", "history"], description="Will display your profits and losses.")
-# async def winrate(ctx):
-#     profitloss = oscillators.PnL(symbol="BTCUSDT")
-
-
-
-#     negative = []
-#     positive = []
-
-#     for items in profitloss['result']['list']:
-#         item = items['closedPnl']
-#         if float(item) <= 0:
-#             negative.append(item)
-#         else:
-#             positive.append(item)        
-
-#     await ctx.send(positive)
-
-
-
-# private message to user
-@client.command()
-async def message(ctx, user:discord.Member, *, message=None):
-    message = f'hey there {ctx.author} wants to say hello'
-    await user.send(message)
-
-
-
-
-# test command for testing
 # stock=GOOG, cash=10000, margin=1, commission=0, fast=12, slow=26
 @client.command(aliases=['test','back','backrest', 'stock'],description='Simple Moving Average backtest')
 async def backtest(ctx, stock=None, cash=10000, margin=1, commission=0, fast=12, slow=26):
+    """Allows you to backtest a coin (under development)"""
     values = discordbacktest(stock, cash, margin, commission, fast, slow)
     
     embed = discord.Embed(title='SMA Backtest', url='http://127.0.0.1:8000/tests.html', description='Backtest Graph', color=0x4dff4d)
