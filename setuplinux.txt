@@ -7,6 +7,3 @@ crontab -e
 * * * * * /usr/bin/sh /home/pi/pentrad/githubpull.sh
 
 pip install django
-
-
-test
