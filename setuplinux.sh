@@ -8,3 +8,6 @@ git config pull.rebase true
 
 
 pip install django
+django-admin startproject pentrad .
+
+python3 manage.py runserver 8000

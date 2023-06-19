@@ -14,42 +14,42 @@ Issues:
 # --------------READING BTC DATA----------------------
 
 # importing daily btc candles from investing.com
-BTC = pd.read_csv('BTChistorical.csv')
+# BTC = pd.read_csv('BTChistorical.csv')
 
 
-# converts the string from "Apr 07, 2023" to 2023-04-07
-def convert_date(date_string):
-    date_object = datetime.strptime(date_string, "%b %d, %Y")
-    formatted_date = date_object.strftime("%Y-%m-%d")
-    return formatted_date
-# applies the above function to the dataframe
-BTC["Date"] = BTC["Date"].apply(convert_date)
+# # converts the string from "Apr 07, 2023" to 2023-04-07
+# def convert_date(date_string):
+#     date_object = datetime.strptime(date_string, "%b %d, %Y")
+#     formatted_date = date_object.strftime("%Y-%m-%d")
+#     return formatted_date
+# # applies the above function to the dataframe
+# BTC["Date"] = BTC["Date"].apply(convert_date)
 
 
-# changes the date from a string to datetime and sets this datetime as index for the dataframe
-BTC['Date'] = pd.to_datetime(BTC['Date'])
-BTC.set_index("Date", inplace=True)
+# # changes the date from a string to datetime and sets this datetime as index for the dataframe
+# BTC['Date'] = pd.to_datetime(BTC['Date'])
+# BTC.set_index("Date", inplace=True)
 
 
-# List of columns to update 
-columns_to_update = ["Open", "High", "Low","Close"]
-# Loop through the columns and remove double quotes and commas, and convert to float
-for col in columns_to_update:
-    BTC[col] = BTC[col].str.replace('"', '').str.replace(',', '').astype(float)
+# # List of columns to update 
+# columns_to_update = ["Open", "High", "Low","Close"]
+# # Loop through the columns and remove double quotes and commas, and convert to float
+# for col in columns_to_update:
+#     BTC[col] = BTC[col].str.replace('"', '').str.replace(',', '').astype(float)
 
 
-# replaces the values in volume to their appropriate decimal count
-suffixes = {"K": 3, "M": 6, "B": 9, "T": 12}
-def replace_suffix_with_multiplier(value):
-    for suffix, multiplier in suffixes.items():
-        if value.endswith(suffix):
-            return int(float(value[:-1]) * 10 ** multiplier)
-    return int(value)
-BTC["Volume"] = BTC["Volume"].map(replace_suffix_with_multiplier)
+# # replaces the values in volume to their appropriate decimal count
+# suffixes = {"K": 3, "M": 6, "B": 9, "T": 12}
+# def replace_suffix_with_multiplier(value):
+#     for suffix, multiplier in suffixes.items():
+#         if value.endswith(suffix):
+#             return int(float(value[:-1]) * 10 ** multiplier)
+#     return int(value)
+# BTC["Volume"] = BTC["Volume"].map(replace_suffix_with_multiplier)
 
 
-# reverses the entire dataframe because backtesting.py works with oldest date at the top
-BTC = BTC.iloc[::-1]
+# # reverses the entire dataframe because backtesting.py works with oldest date at the top
+# BTC = BTC.iloc[::-1]
 
 
 # ----------------STRATEGY CLASSES-----------------
@@ -244,7 +244,7 @@ class OSMA(Strategy):
 
 #bt = Backtest(GOOG, RsiOscillator, cash = 10_000)
 #bt = Backtest(BTC, MOVINGAVERAGE, cash = 10_000, margin=0.2)
-
+bt = Backtest(GOOG, OSMA, cash=10_000)
 
 # -------------------OPTIMIZATION---------------------
 
@@ -255,13 +255,13 @@ class OSMA(Strategy):
 # )
 
 # optimization for OSMA
-# stats = bt.optimize(
-#     upper_bound = 70,
-#     lower_bound = 30,
-#     rsi_window = range(10,20),
-#     movingaverage = range(5,15),
-#     osma_window = range(5,15)
-# )
+stats = bt.optimize(
+    upper_bound = 70,
+    lower_bound = 30,
+    rsi_window = range(10,20),
+    movingaverage = range(5,15),
+    osma_window = range(5,15)
+)
 
 # optimization for OWNSMA
 # stats = bt.optimize(
@@ -272,10 +272,10 @@ class OSMA(Strategy):
 
 # -----------------STATS DISPLAY-------------------
 
-#stats = bt.run()
-# bt.plot(filename='./tests')
-# print(stats)
-# print(stats['_strategy'])
+stats = bt.run()
+bt.plot(filename='./tests')
+print(stats)
+print(stats['_strategy'])
 
 
 # -----------------DISCORD FUNCTION----------------
