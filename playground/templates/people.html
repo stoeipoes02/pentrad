@@ -1,0 +1,15 @@
+<html>
+    <body>
+        <h1>People</h1>
+        <ul>
+            {% for person in people %}
+                <li>{{ person.first_name }} {{ person.last_name }}</li>
+            {% endfor %}
+        </ul>
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete_last">
+            <input type="submit" value="Delete Last Person">
+        </form>
+    </body>
+</html>

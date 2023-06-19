@@ -15,6 +15,5 @@ python3 manage.py inspectdb
 python3 manage.py makemigrations
 python3 manage.py migrate
 
-
 # start server at local
 python3 manage.py runserver 8000
