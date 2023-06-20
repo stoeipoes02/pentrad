@@ -18,13 +18,10 @@ def say_hello(request):
         last_name = request.POST['last_name']
         p = Person(first_name=first_name, last_name=last_name)
         p.save()
-        return redirect('/playground/hello/')
+        return redirect('/playground/add/')
     x = calculate()
-    return render(request, 'hello.html', {'name':'Kick', 'var':x})
+    return render(request, 'add.html', {'name':'Kick', 'var':x})
 
-# def show_people(request):
-#     people = Person.objects.all()
-#     return render(request, 'people.html', {'people': people})
 
 def show_people(request):
     if request.method == 'POST' and request.POST['action'] == 'delete_last':
@@ -33,3 +30,6 @@ def show_people(request):
             last_person.delete()
     people = Person.objects.all()
     return render(request, 'people.html', {'people': people})
+
+def home(request):
+    return render(request, 'home.html')
